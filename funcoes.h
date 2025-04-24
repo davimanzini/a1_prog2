@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <time.h>
+#include <sys/types.h>
+
 struct diretorio{
 
     char nome[1000];
@@ -11,3 +14,7 @@ struct diretorio{
     long int ordem;
     long int localizacao; //endereço do arquivo em archive
 };
+
+void inserir_sem_compressao(char *archive, char **arquivos, int n);
+
+
