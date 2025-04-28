@@ -9,7 +9,7 @@
 
 void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numero de arquivos
 
-    //CHECAR SE MEMBRO JA ESTA NO ARCHIVE
+    //CHECAR SE MEMBRO JA ESTA NO ARCHIVE!!
 
     FILE *fp_archive = fopen(archive, "ab+"); //ab+ é leitura e escrita no final do arquivo
     if(!fp_archive){
@@ -58,4 +58,22 @@ void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numer
     }
 
     fclose(fp_archive);
+}
+
+void imprime_archive(char *archive){
+
+    FILE *fp_archive = fopen(archive, "r"); //conferir se r ta certo
+    if(!fp_archive){
+        perror("Erro ao abrir o archive");
+        return;
+    }
+
+    // FAZER CASO DO ARCHIVE ESTAR VAZIO
+
+    fseek(fp_archive, 0, SEEK_SET); //coloca o ponteiro no começo do arquivo
+
+    while(fp_archive != \0)
+
+    //str tok?
+
 }
