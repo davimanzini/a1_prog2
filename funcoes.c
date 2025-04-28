@@ -42,12 +42,12 @@ void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numer
         struct diretorio dir;
 
         strcpy(dir.nome, arquivos[i]);
-        dir.data_mod = time(NULL);
-        dir.ordem = i;
-        dir.uid = getuid(); //?
+        dir.data_mod         = time(NULL);
+        dir.ordem            = i;
+        dir.uid              = getuid(); //?
         dir.tamanho_original = tamanho;
-        dir.tamanho_disco = tamanho;
-        dir.localizacao = posicao;
+        dir.tamanho_disco    = tamanho;
+        dir.localizacao      = posicao;
 
         diretorios[i] = dir; //salva as infos do membro[i] no vet. de diretorios
 
@@ -57,23 +57,51 @@ void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numer
         fwrite(&diretorios[i], sizeof(struct diretorio), 1, fp_archive); //?
     }
 
+    fwrite(&n, sizeof(int), 1, fp_archive); //add int numero de intens no final do archive
+
     fclose(fp_archive);
 }
 
-void imprime_archive(char *archive){
+void lista_informacoes(char *archive){ // -c
 
-    FILE *fp_archive = fopen(archive, "r"); //conferir se r ta certo
+    FILE *fp_archive = fopen(archive, "rb"); //conferir se rb ta certo
     if(!fp_archive){
         perror("Erro ao abrir o archive");
         return;
     }
 
-    // FAZER CASO DO ARCHIVE ESTAR VAZIO
+    fseek(fp_archive, 0, SEEK_END);
+    long int tamanho = ftell(fp_archive);
 
-    fseek(fp_archive, 0, SEEK_SET); //coloca o ponteiro no começo do arquivo
+    //caso do archive estar vazio
+    if(tamanho <= 0){ //checar essa condicao
+        perror("Erro: archive está vazio");
+        fclose(fp_archive);
+        return;
+    }
 
-    while(fp_archive != \0)
+    int qtd_arquivos;
 
-    //str tok?
+    fseek(fp_archive, - sizeof(int), SEEK_END);
+    fread(&qtd_arquivos, sizeof(int), 1, fp_archive); //duvida em passar & de qtd_arquivos
+    
+    fseek(fp_archive, - sizeof(int) - (qtd_arquivos * sizeof(struct diretorio)), SEEK_END); //coloca o ponteiro para o comeco dos diretorios
+    
+    struct diretorio dir;
+    for(int i = 0; i < qtd_arquivos; i++){
+        fread(&dir, sizeof(struct diretorio), 1, fp_archive);
 
+        printf("Nome do arquivo: %s\n", dir.nome); // qnd usar ponto e quando usar seta?
+        printf("UID: %d\n", dir.uid);
+        printf("Tamanho original: %ld\n", dir.tamanho_original);
+        printf("Tamanho em disco: %ld\n", dir.tamanho_disco);
+        printf("Data de modificacao: %ld\n", dir.data_mod); //formatar? data_mod é long int??
+        printf("Ordem no archive: %ld\n", dir.ordem);
+        printf("Localizacao no archive: %ld\n", dir.localizacao);
+    }
+
+    fclose(fp_archive);
+
+    return;
+    
 }
