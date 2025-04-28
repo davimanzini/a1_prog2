@@ -15,6 +15,9 @@ struct diretorio{
     long int localizacao; //endereço do arquivo em archive
 };
 
+
 void inserir_sem_compressao(char *archive, char **arquivos, int n);
+
+void preenche_diretorio(struct diretorio *dir, FILE *arquivo);
 
 
