@@ -11,7 +11,7 @@ void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numer
 
     //CHECAR SE MEMBRO JA ESTA NO ARCHIVE!!
 
-    FILE *fp_archive = fopen(archive, "ab+"); //ab+ é leitura e escrita no final do arquivo
+    FILE *fp_archive = fopen(archive, "rb+"); //ab+ é leitura e escrita no final do arquivo
     if(!fp_archive){
         perror("Erro ao abrir o archive");
         return;
