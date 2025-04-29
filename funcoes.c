@@ -27,7 +27,55 @@ void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numer
 
     if(tamanho_total == 0){ //archive vazio!!
 
+        struct membro diretorio[n];
+    
+        for(int i = 0; i < n; i++){
+
+            FILE *fp_membro = fopen(arquivos[i], "rb"); //como é feita conexao nomearquivo e arquivo?
+            if(!fp_membro){
+                perror("Erro ao a abrir membro");
+                continue; // pq continue mesmo?
+            }
+
+            fseek(fp_membro, 0, SEEK_END);
+            long int tamanho = ftell(fp_membro);
+            fseek(fp_membro, 0, SEEK_SET); //volta o ponteiro para o inicio do arquivo
+            
+            char *buffer = malloc(tamanho); //reserva espaço temp. na RAM
+            if(!buffer){
+                perror("Erro ao abrir o arquivo");
+                continue;
+            }
+            
+            fread(buffer, 1, tamanho, fp_membro); //le do membro pro buffer
+            long int posicao = ftell(fp_archive); //para saber em que posicao do archive o novo arq cmc
+            fwrite(buffer, 1, tamanho, fp_archive); //escreve do buffer pro archive
+            fclose(fp_membro);
+            free(buffer);
+
+            struct membro mb;
+
+            strcpy(mb.nome, arquivos[i]);
+            mb.data_mod         = time(NULL);
+            mb.ordem            = i;
+            mb.uid              = getuid(); //?
+            mb.tamanho_original = tamanho;
+            mb.tamanho_disco    = tamanho;
+            mb.localizacao      = posicao;
+
+            diretorio[i] = mb; //salva as infos do membro[i] no vet. de diretorios
+
+        }
+
+        for(int i = 0; i < n; i++){
+            fwrite(&diretorio[i], sizeof(struct membro), 1, fp_archive); //?
+        }
+
+        fwrite(&n, sizeof(int), 1, fp_archive); //add int numero de intens no final do archive
+
     }
+
+
 
     else if(tamanho_total != 0){ //archive nao esta vazio
 
@@ -35,61 +83,28 @@ void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numer
         fread(&qtd_membros, sizeof(int), 1, fp_archive); //guarda qnts arquivos tem
         fseek(fp_archive, - sizeof(int) - (qtd_membros * sizeof(struct membro)), SEEK_END); //coloca ptr no cmc do diretorio
 
-        for(int i = 0; i < qtd_membros; i++){
-            
-            struct membro aux; //mudar?
-            fread(&aux, sizeof(struct membro), 1, fp_archive);
-            if(strcmp(aux.nome, arquivos[i]) ==  0){ //se nome do membro do archive for igual a nome do membro a ser inserido
-                //A COMPLETAR
+        struct membro dir[qtd_membros];
+
+        for(int i = 0; i < qtd_membros; i ++){ //colocamos os membros do archive dentro de um vetor de membros (dir)
+            fread(&dir[i], sizeof(struct membro), 1, fp_archive);
+        }
+
+        for(int i = 0; i < n; i++){
+            for(int j = 0; j < qtd_membros; j++){
+                if(strcmp(arquivos[i], dir[j].nome) == 0){
+                    //arquivo a ser inserido já existe
+                }
+                else if(strcmp(arquivos[i], dir[j].nome) != 0){
+                    //arquivo a ser lido nao existe
+                }
             }
         }
 
 
-    }
-
-    struct membro diretorio[n];
-    
-    for(int i = 0; i < n; i++){
-
-        FILE *fp_membro = fopen(arquivos[i], "rb"); //como é feita conexao nomearquivo e arquivo?
-
-        fseek(fp_membro, 0, SEEK_END);
-        long int tamanho = ftell(fp_membro);
-        fseek(fp_membro, 0, SEEK_SET); //volta o ponteiro para o inicio do arquivo
-        
-        char *buffer = malloc(tamanho); //reserva espaço temp. na RAM
-        if(!buffer){
-            perror("Erro ao abrir o arquivo");
-            continue;
-        }
-        
-        fread(buffer, 1, tamanho, fp_membro); //le do membro pro buffer
-        long int posicao = ftell(fp_archive); //para saber em que posicao do archive o novo arq cmc
-        fwrite(buffer, 1, tamanho, fp_archive); //escreve do buffer pro archive
-        fclose(fp_membro);
-        free(buffer);
-
-        struct membro mb;
-
-        strcpy(mb.nome, arquivos[i]);
-        mb.data_mod         = time(NULL);
-        mb.ordem            = i;
-        mb.uid              = getuid(); //?
-        mb.tamanho_original = tamanho;
-        mb.tamanho_disco    = tamanho;
-        mb.localizacao      = posicao;
-
-        diretorio[i] = mb; //salva as infos do membro[i] no vet. de diretorios
 
     }
 
-    for(int i = 0; i < n; i++){
-        fwrite(&diretorio[i], sizeof(struct membro), 1, fp_archive); //?
-    }
-
-    fwrite(&n, sizeof(int), 1, fp_archive); //add int numero de intens no final do archive
-
-    fclose(fp_archive);
+    fclose(fp_archive); //fechamos o archive apenas após os dois condicionais (if/else)
 }
 
 
