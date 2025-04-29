@@ -11,13 +11,43 @@ void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numer
 
     //CHECAR SE MEMBRO JA ESTA NO ARCHIVE!!
 
-    FILE *fp_archive = fopen(archive, "rb+"); //ab+ é leitura e escrita no final do arquivo
+    FILE *fp_archive = fopen(archive, "rb+"); //qqr mode com r só funciona se o arquivo ja existir
     if(!fp_archive){
-        perror("Erro ao abrir o archive");
-        return;
+        fp_archive = fopen(archive, "wb+"); //nao podemos usar só wb pq esse mode apaga tudo do arquivo
+        if(!fp_archive){
+            perror("Erro ao criar o archive");
+            return;
+        }
     }
 
-    struct diretorio diretorios[n];
+    fseek(fp_archive, 0, SEEK_END);
+    long int tamanho_total = ftell(fp_archive);
+
+    int qtd_membros = 0;
+
+    if(tamanho_total == 0){ //archive vazio!!
+
+    }
+
+    else if(tamanho_total != 0){ //archive nao esta vazio
+
+        fseek(fp_archive, - sizeof(int), SEEK_END); //cm nao esta vazio, o ultimo item eh um int tamanho
+        fread(&qtd_membros, sizeof(int), 1, fp_archive); //guarda qnts arquivos tem
+        fseek(fp_archive, - sizeof(int) - (qtd_membros * sizeof(struct membro)), SEEK_END); //coloca ptr no cmc do diretorio
+
+        for(int i = 0; i < qtd_membros; i++){
+            
+            struct membro aux; //mudar?
+            fread(&aux, sizeof(struct membro), 1, fp_archive);
+            if(strcmp(aux.nome, arquivos[i]) ==  0){ //se nome do membro do archive for igual a nome do membro a ser inserido
+                //A COMPLETAR
+            }
+        }
+
+
+    }
+
+    struct membro diretorio[n];
     
     for(int i = 0; i < n; i++){
 
@@ -39,28 +69,32 @@ void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numer
         fclose(fp_membro);
         free(buffer);
 
-        struct diretorio dir;
+        struct membro mb;
 
-        strcpy(dir.nome, arquivos[i]);
-        dir.data_mod         = time(NULL);
-        dir.ordem            = i;
-        dir.uid              = getuid(); //?
-        dir.tamanho_original = tamanho;
-        dir.tamanho_disco    = tamanho;
-        dir.localizacao      = posicao;
+        strcpy(mb.nome, arquivos[i]);
+        mb.data_mod         = time(NULL);
+        mb.ordem            = i;
+        mb.uid              = getuid(); //?
+        mb.tamanho_original = tamanho;
+        mb.tamanho_disco    = tamanho;
+        mb.localizacao      = posicao;
 
-        diretorios[i] = dir; //salva as infos do membro[i] no vet. de diretorios
+        diretorio[i] = mb; //salva as infos do membro[i] no vet. de diretorios
 
     }
 
     for(int i = 0; i < n; i++){
-        fwrite(&diretorios[i], sizeof(struct diretorio), 1, fp_archive); //?
+        fwrite(&diretorio[i], sizeof(struct membro), 1, fp_archive); //?
     }
 
     fwrite(&n, sizeof(int), 1, fp_archive); //add int numero de intens no final do archive
 
     fclose(fp_archive);
 }
+
+
+//separacao de funcoes
+
 
 void lista_informacoes(char *archive){ // -c
 
@@ -85,11 +119,11 @@ void lista_informacoes(char *archive){ // -c
     fseek(fp_archive, - sizeof(int), SEEK_END);
     fread(&qtd_arquivos, sizeof(int), 1, fp_archive); //duvida em passar & de qtd_arquivos
     
-    fseek(fp_archive, - sizeof(int) - (qtd_arquivos * sizeof(struct diretorio)), SEEK_END); //coloca o ponteiro para o comeco dos diretorios
+    fseek(fp_archive, - sizeof(int) - (qtd_arquivos * sizeof(struct membro)), SEEK_END); //coloca o ponteiro para o comeco dos diretorios
     
-    struct diretorio dir;
+    struct membro dir;
     for(int i = 0; i < qtd_arquivos; i++){
-        fread(&dir, sizeof(struct diretorio), 1, fp_archive);
+        fread(&dir, sizeof(struct membro), 1, fp_archive);
 
         printf("Nome do arquivo: %s\n", dir.nome); // qnd usar ponto e quando usar seta?
         printf("UID: %d\n", dir.uid);

@@ -4,7 +4,7 @@
 #include <time.h>
 #include <sys/types.h>
 
-struct diretorio{
+struct membro{
 
     char nome[1000];
     uid_t uid;
