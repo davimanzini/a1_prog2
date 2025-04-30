@@ -90,13 +90,23 @@ void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numer
         }
 
         for(int i = 0; i < n; i++){
+
+            int iguais = 0;
+
             for(int j = 0; j < qtd_membros; j++){
-                if(strcmp(arquivos[i], dir[j].nome) == 0){
-                    //arquivo a ser inserido já existe
+                if(strcmp(arquivos[i], dir[j].nome) == 0){ //achou um arquivo no archive com nome igual
+                    iguais = 1;
+                    break; //sai do for de dentro 
                 }
-                else if(strcmp(arquivos[i], dir[j].nome) != 0){
-                    //arquivo a ser lido nao existe
-                }
+               
+            }
+
+            if(iguais == 1){ //encontrou o arquivo no archive
+
+            }
+
+            else{ //nao encontrou o arquivo no archive
+
             }
         }
 
