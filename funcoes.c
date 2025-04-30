@@ -105,18 +105,32 @@ void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numer
 
         for(int i = 0; i < n; i++){
 
-            int iguais = 0;
+            int iguais = -1;
 
             for(int j = 0; j < qtd_membros; j++){
                 if(strcmp(arquivos[i], dir[j].nome) == 0){ //achou um arquivo no archive com nome igual
-                    iguais = 1;
+                    iguais = j;
                     break; //sai do for de dentro 
                 }
                
             }
 
-            if(iguais == 1){ //encontrou o arquivo no archive
+            if(iguais != -1){ //encontrou o arquivo no archive
 
+                fseek(&arquivos[i], 0, SEEK_END);
+                long int tam_insert = ftell(arquivos[i]); //tamanho do arq a ser inserido
+                
+                if(tam_insert == dir[iguais].tamanho_disco){ //tamanhos iguais
+
+                }
+
+                else if(tam_insert > dir[iguais].tamanho_disco){ //tamanho novo maior
+
+                }
+
+                else if(tam_insert < dir[iguais].tamanho_disco){ //tamanho antigo maior
+
+                }
             }
 
             else{ //nao encontrou o arquivo no archive
