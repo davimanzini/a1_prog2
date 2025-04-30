@@ -25,8 +25,6 @@ void mover(FILE *arquivo, long int inicio, long int insercao, unsigned long tama
 
 void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numero de arquivos
 
-    //CHECAR SE MEMBRO JA ESTA NO ARCHIVE!!
-
     FILE *fp_archive = fopen(archive, "rb+"); //qqr mode com r só funciona se o arquivo ja existir
     if(!fp_archive){
         fp_archive = fopen(archive, "wb+"); //nao podemos usar só wb pq esse mode apaga tudo do arquivo
@@ -136,18 +134,43 @@ void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numer
                 char *buffer = malloc(tamanho);
                 if(!buffer){
                     perror("Erro alocando buffer");
-                    continue;
                     fclose(novo_arquivo);
+                    continue;
                 }
 
-                fread(buffer, tamanho, 1, novo_arquivo);
+                fread(buffer, 1, tamanho, novo_arquivo);
                 fclose(novo_arquivo);
 
-                fseek(fp_archive, 0, SEEK_END); //REVISAR (queria garantir que o ptr estaria no final)
+                fseek(fp_archive, 0, SEEK_END); 
 
                 long int pos_insercao = ftell(fp_archive) - sizeof(int) - (qtd_membros * sizeof(struct membro));
 
-                
+                ftruncate(fileno(fp_archive), pos_insercao); //truncamos o arquivo, tiramos diretorio e int
+
+                fseek(fp_archive, 0, SEEK_END);
+                fwrite(buffer, tamanho, 1, fp_archive); //escreve novo arq no archive
+                free(buffer);
+
+                struct membro novo;
+
+                strcpy(novo.nome, arquivos[i]);
+                novo.data_mod         = time(NULL);
+                novo.ordem            = qtd_membros; //REVISAR! ordem cmc em 0?
+                novo.uid              = getuid();
+                novo.tamanho_original = tamanho;
+                novo.tamanho_disco    = tamanho;
+                novo.localizacao      = pos_insercao;
+
+                dir[qtd_membros] = novo; //checar
+                qtd_membros ++;
+
+                for(int k = 0; k < qtd_membros; k++){
+                    fwrite(&dir[k], sizeof(struct membro), 1, fp_archive);
+                }
+
+                fwrite(&qtd_membros, sizeof(int), 1, fp_archive);
+                //FCLOSE em alguma coisa?
+
             }
         }
 
