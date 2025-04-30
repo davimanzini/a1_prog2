@@ -6,6 +6,22 @@
 #include <fcntl.h> // o que faz
 #include "funcoes.h"
 
+void mover(FILE *arquivo, long int inicio, long int insercao, unsigned long tamanho){ //pq unsigned?
+
+    char *buffer = malloc(tamanho);
+
+    fseek(arquivo, inicio, SEEK_SET);
+    fread(buffer, tamanho, 1, arquivo);
+
+    fseek(arquivo, insercao, SEEK_SET);
+    fwrite(buffer, tamanho, 1, arquivo);
+
+    free(buffer);
+}
+
+
+//separacao de funcoes
+
 
 void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numero de arquivos
 
@@ -107,6 +123,31 @@ void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numer
 
             else{ //nao encontrou o arquivo no archive
 
+                FILE *novo_arquivo = fopen(arquivos[i], "rb+");
+                if(!novo_arquivo){
+                    perror("Erro ao abrir novo arquivo");
+                    continue;
+                }
+
+                fseek(novo_arquivo, 0, SEEK_END);
+                long int tamanho = ftell(novo_arquivo); //salva o tamanho do novo arquivo
+                fseek(novo_arquivo, 0, SEEK_SET);
+
+                char *buffer = malloc(tamanho);
+                if(!buffer){
+                    perror("Erro alocando buffer");
+                    continue;
+                    fclose(novo_arquivo);
+                }
+
+                fread(buffer, tamanho, 1, novo_arquivo);
+                fclose(novo_arquivo);
+
+                fseek(fp_archive, 0, SEEK_END); //REVISAR (queria garantir que o ptr estaria no final)
+
+                long int pos_insercao = ftell(fp_archive) - sizeof(int) - (qtd_membros * sizeof(struct membro));
+
+                
             }
         }
 
