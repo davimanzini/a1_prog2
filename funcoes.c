@@ -117,11 +117,40 @@ void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numer
 
             if(iguais != -1){ //encontrou o arquivo no archive
 
-                fseek(&arquivos[i], 0, SEEK_END);
-                long int tam_insert = ftell(arquivos[i]); //tamanho do arq a ser inserido
+                FILE *fp_novo = fopen(arquivos[i], "rb");
+                if(!fp_novo){
+                    perror("Erro ao abrir o arquivo novo");
+                    continue;
+                }
+
+                fseek(fp_novo, 0, SEEK_END);
+                long int tam_insert = ftell(fp_novo); //tamanho do arq a ser inserido
+                fseek(fp_novo, 0, SEEK_SET);
                 
                 if(tam_insert == dir[iguais].tamanho_disco){ //tamanhos iguais
 
+                    char *buffer = malloc(tam_insert);
+
+                    fread(buffer, 1, tam_insert, fp_novo);
+                    fclose(fp_novo);
+
+                    fseek(fp_archive, dir[iguais].localizacao, SEEK_SET);
+                    fwrite(buffer, 1, tam_insert, fp_archive);
+                    free(buffer);
+
+                    dir[iguais].data_mod = time(NULL); //atualiza infos membro
+                    dir[iguais].uid = getuid();
+
+                    fseek(fp_archive, 0, SEEK_END);
+                    long int pos_membros = ftell(fp_archive) - sizeof(int) - qtd_membros * (sizeof(struct membro));
+                    ftruncate(fileno(fp_archive), pos_membros);
+
+                    fseek(fp_archive, 0, SEEK_END);
+                    for(int k = 0; k < qtd_membros; k++){
+                        fwrite(&dir[k], sizeof(struct membro), 1, fp_archive);
+                    }
+
+                    fwrite(&qtd_membros, sizeof(int), 1, fp_archive);
                 }
 
                 else if(tam_insert > dir[iguais].tamanho_disco){ //tamanho novo maior
