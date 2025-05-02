@@ -160,32 +160,14 @@ void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numer
                 else if(tam_insert > dir[iguais].tamanho_disco){ //tamanho novo maior
 
                     long int tam_diff = tam_insert - dir[iguais].tamanho_disco;
-
-                    fseek(fp_archive, 0, SEEK_END);
-                    long int pos_count = ftell(fp_archive);
-                    fseek(fp_archive, 0, SEEK_SET);
-
-                    mover(fp_archive, 
-                        pos_count, 
-                        pos_count + tam_diff, 
-                        sizeof(int)); //move o count do final do archive
-
-
-                    fseek(fp_archive, - sizeof(int) - tam_diff, SEEK_END);
-                    long int pos_membros = ftell(fp_archive);
-
-                    for(int k = qtd_membros - 1; k >= 0; k--){ //movendo membros
-
-                        mover(fp_archive,
-                            pos_membros - sizeof(struct membro), 
-                            pos_membros - sizeof(struct membro) + tam_diff, 
-                            sizeof(struct membro));
-                        
-                            pos_membros = pos_membros - sizeof(struct membro);
-                    }
-
+                
+                    fseek(fp_archive, - sizeof(int) - (qtd_membros * sizeof(struct membro)), SEEK_END);
+                    long int pos_trunc = ftell(fp_archive);
+                
+                    ftruncate(fileno(fp_archive), pos_trunc);
+                
                     for(int l = qtd_membros - 1; l > iguais; l--){ //movendo arquivos
-
+                
                             mover(fp_archive,
                                 dir[l].localizacao,
                                 dir[l].localizacao + tam_diff,
@@ -193,40 +175,32 @@ void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numer
                             
                                 dir[l].localizacao += tam_diff;
                     }
-
+                
                     char *buffer = malloc(tam_insert);
                     if(!buffer){
                         perror("Erro ao alocando buffer");
                         fclose(fp_novo);
                         continue;
                     }
-
+                
                     fread(buffer, 1, tam_insert, fp_novo);
                     fclose(fp_novo);
-
+                
                     fseek(fp_archive, dir[iguais].localizacao, SEEK_SET);
                     fwrite(buffer, 1, tam_insert, fp_archive);
                     free(buffer);
-
+                
                     dir[iguais].tamanho_disco    = tam_insert;
                     dir[iguais].tamanho_original = tam_insert;
                     dir[iguais].data_mod         = time(NULL);
                     dir[iguais].uid              = getuid();
-
+                
                     fseek(fp_archive, 0, SEEK_END);
-                    
-                    long int pos_trunc = ftell(fp_archive) - 
-                    sizeof(int) - 
-                    (qtd_membros * sizeof(struct membro));
-
-                    ftruncate(fileno(fp_archive), pos_trunc);
-
-                    fseek(fp_archive, 0, SEEK_END);
-
+                
                     for (int m = 0; m < qtd_membros; m++) {
                         fwrite(&dir[m], sizeof(struct membro), 1, fp_archive);
                     }
-
+                
                     fwrite(&qtd_membros, sizeof(int), 1, fp_archive);
                 }
 
