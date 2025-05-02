@@ -60,7 +60,8 @@ int main(int argc, char *argv[]){
             break;
 
         case 6:
-
+            printf("Executando funcao de listagem (-c)!\n");
+            lista_informacoes(argv[2]);
             break;
         
         default:
