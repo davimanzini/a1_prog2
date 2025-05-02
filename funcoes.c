@@ -378,7 +378,7 @@ void lista_informacoes(char *archive){ // -c
     for(int i = 0; i < qtd_arquivos; i++){
         fread(&dir, sizeof(struct membro), 1, fp_archive);
 
-        printf("Nome do arquivo: %s\n", dir.nome); // qnd usar ponto e quando usar seta?
+        printf("Nome do arquivo: %s\n", dir.nome);
         printf("UID: %d\n", dir.uid);
         printf("Tamanho original: %ld\n", dir.tamanho_original);
         printf("Tamanho em disco: %ld\n", dir.tamanho_disco);
