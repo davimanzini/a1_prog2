@@ -211,7 +211,7 @@ void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numer
 
                     for(int k = 0; k < qtd_membros; k++){ //movendo arquivos
 
-                        if(dir[k].localizacao > dir[iguais].localizacao){
+                        if(dir[k].localizacao > dir[iguais].localizacao){ //MUDAR QUE NEM O OUTRO FOR
 
                             mover(fp_archive,
                                 dir[k].localizacao,
@@ -355,7 +355,7 @@ void lista_informacoes(char *archive){ // -c
 
     for(int i = 0; i < qtd_arquivos; i++){
         struct membro dir;
-        if(fread(&dir, sizeof(struct membro), 1, fp_archive) != 1){
+        if(fread(&dir, sizeof(struct membro), 1, fp_archive) != 1){  //precisa disso?
             perror("Erro ao ler struct membro");
             break;
         }
@@ -374,4 +374,86 @@ void lista_informacoes(char *archive){ // -c
     }
 
     fclose(fp_archive);
+}
+
+
+void remove_arquivos(char *archive, char **arquivos, int n){
+
+    FILE *fp_archive = fopen(archive, "rb+"); //checar mode
+    if(!fp_archive){
+        perror("Erro ao abrir o archive");
+        fclose(fp_archive);
+        return;
+    }
+
+    fseek(fp_archive, 0, SEEK_END);
+    long int tam_archive = ftell(fp_archive);
+
+    if(tam_archive == 0){ //archive vazio
+        
+        perror("Erro: o archive esta vazio!");
+        fclose(fp_archive);
+        return;
+    }
+
+    else{ //archive nao esta vazio
+
+        int qtd_membros;
+        fseek(fp_archive, - sizeof(int), SEEK_END);
+        fread(&qtd_membros, sizeof(int), 1, fp_archive);
+
+        struct membro dir[qtd_membros];
+
+        for(int i = 0; i < qtd_membros; i ++){ //colocamos os membros do archive dentro de um vetor de membros (dir)
+            fread(&dir[i], sizeof(struct membro), 1, fp_archive);
+        }
+
+        fseek(fp_archive, 
+            - sizeof(int) 
+            - (qtd_membros * sizeof(struct membro)), 
+            SEEK_END);
+
+        long int pos_trunc = ftell(fp_archive);
+
+        ftruncate(fileno(fp_archive), pos_trunc); //trunca o diretorio e o count
+
+        for(int i = 0; i < n; i++){
+
+            int iguais = -1;
+
+            for(int j = 0; j < qtd_membros; j++){
+
+                if(strcmp(arquivos[0], dir[j].nome) == 0){
+                    iguais = j;
+                    break;
+                }
+            }
+
+            if(iguais == -1){ //nao achou no archive
+                perror("Erro: esse arquivo nao esta no archive!");
+                continue; //ta certo isso??
+            }
+
+            else if(iguais != -1){ //achou no archive
+
+                for(int k = iguais + 1; k < qtd_membros; k++){
+                    mover(fp_archive, 
+                        dir[k].localizacao, 
+                        dir[k].localizacao - dir[iguais].tamanho_disco, 
+                        dir[k].tamanho_disco);
+                }
+
+                fseek(fp_archive, - dir[iguais].tamanho_disco, SEEK_END); //fazer esse bloco depois do double for uma vez só?
+                long int trunc = ftell(fp_archive);
+                ftruncate(fileno(fp_archive), trunc);
+
+                qtd_membros --;
+                //COMO ATUALIZAR O DIRETORIO???
+            }
+        }
+
+        //ESCREVER DIRETORIO
+        //ESCREVER QTD_MEMBROS
+
+    }
 }
