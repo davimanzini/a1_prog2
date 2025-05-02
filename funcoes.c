@@ -325,7 +325,7 @@ void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numer
 
 void lista_informacoes(char *archive){ // -c
 
-    FILE *fp_archive = fopen(archive, "rb"); //conferir se rb ta certo
+    FILE *fp_archive = fopen(archive, "rb");
     if(!fp_archive){
         perror("Erro ao abrir o archive");
         return;
@@ -334,35 +334,44 @@ void lista_informacoes(char *archive){ // -c
     fseek(fp_archive, 0, SEEK_END);
     long int tamanho = ftell(fp_archive);
 
-    //caso do archive estar vazio
-    if(tamanho <= 0){ //checar essa condicao
-        perror("Erro: archive está vazio");
+    if(tamanho <= 0){
+        printf("Archive está vazio.\n");
         fclose(fp_archive);
         return;
     }
 
-    int qtd_arquivos;
+    int qtd_arquivos = 0;
 
-    fseek(fp_archive, - sizeof(int), SEEK_END);
-    fread(&qtd_arquivos, sizeof(int), 1, fp_archive); //duvida em passar & de qtd_arquivos
-    
-    fseek(fp_archive, - sizeof(int) - (qtd_arquivos * sizeof(struct membro)), SEEK_END); //coloca o ponteiro para o comeco dos diretorios
-    
-    struct membro dir;
+    fseek(fp_archive, -sizeof(int), SEEK_END);
+    if(fread(&qtd_arquivos, sizeof(int), 1, fp_archive) != 1){
+        perror("Erro ao ler qtd_arquivos");
+        fclose(fp_archive);
+        return;
+    }
+
+    printf("Qtd de arquivos no archive: %d\n\n", qtd_arquivos);
+
+    fseek(fp_archive, -sizeof(int) - (qtd_arquivos * sizeof(struct membro)), SEEK_END);
+
     for(int i = 0; i < qtd_arquivos; i++){
-        fread(&dir, sizeof(struct membro), 1, fp_archive);
+        struct membro dir;
+        if(fread(&dir, sizeof(struct membro), 1, fp_archive) != 1){
+            perror("Erro ao ler struct membro");
+            break;
+        }
+
+        char data_formatada[100];
+        struct tm *info = localtime(&dir.data_mod);
+        strftime(data_formatada, sizeof(data_formatada), "%d/%m/%Y %H:%M:%S", info);
 
         printf("Nome do arquivo: %s\n", dir.nome);
         printf("UID: %d\n", dir.uid);
         printf("Tamanho original: %ld\n", dir.tamanho_original);
         printf("Tamanho em disco: %ld\n", dir.tamanho_disco);
-        printf("Data de modificacao: %ld\n", dir.data_mod); //formatar? data_mod é long int??
+        printf("Data de modificacao: %s\n", data_formatada);
         printf("Ordem no archive: %ld\n", dir.ordem);
-        printf("Localizacao no archive: %ld\n", dir.localizacao);
+        printf("Localizacao no archive: %ld\n\n", dir.localizacao);
     }
 
     fclose(fp_archive);
-
-    return;
-    
 }
