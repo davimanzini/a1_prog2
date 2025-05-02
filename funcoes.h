@@ -19,6 +19,6 @@ void mover(FILE *arquivo, long int inicio, long int insercao, unsigned long tama
 
 void inserir_sem_compressao(char *archive, char **arquivos, int n);
 
-void imprime_archive(char *archive);
+void lista_informacoes(char *archive);
 
 
