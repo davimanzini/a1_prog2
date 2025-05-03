@@ -56,7 +56,8 @@ int main(int argc, char *argv[]){
             break;
         
         case 5:
-
+            printf("Executando funcao de remocao (-r)!\n");
+            remove_arquivos(argv[2], arquivos, qtd_arquivos);
             break;
 
         case 6:
