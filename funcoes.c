@@ -146,12 +146,14 @@ void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numer
 
                     fseek(fp_archive, 0, SEEK_END);
                     
+                    /*
                     long int pos_membros = ftell(fp_archive) - 
                     sizeof(int) - 
                     qtd_membros * (sizeof(struct membro));
                     
                     ftruncate(fileno(fp_archive), pos_membros); //realmente necessario?
-
+                    */
+                   
                     fseek(fp_archive, 0, SEEK_END);
                     for(int k = 0; k < qtd_membros; k++){
                         fwrite(&dir[k], sizeof(struct membro), 1, fp_archive);
@@ -212,6 +214,7 @@ void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numer
 
                     long int tam_diff = dir[iguais].tamanho_disco - tam_insert;
 
+                    /*
                     for(int k = 0; k < qtd_membros; k++){ //movendo arquivos
 
                         if(dir[k].localizacao > dir[iguais].localizacao){ //MUDAR QUE NEM O OUTRO FOR
@@ -222,6 +225,14 @@ void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numer
                                 dir[k].tamanho_disco);
                             
                                 dir[k].localizacao -= tam_diff;
+                        }
+                    }
+                    */
+
+                    for(int k = qtd_membros - 1; k >= 0; k--){
+                        if(dir[k].localizacao > dir[iguais].localizacao){
+                            mover(fp_archive, dir[k].localizacao, dir[k].localizacao - tam_diff, dir[k].tamanho_disco);
+                            dir[k].localizacao -= tam_diff;
                         }
                     }
 
@@ -464,7 +475,7 @@ void remove_arquivos(char *archive, char **arquivos, int n){
                 for(int l = iguais; l < qtd_membros - 1; l++){
                     dir[l] = dir[l + 1];
                 } 
-                qtd_membros --; // deixar dps do laço (pq?)
+                qtd_membros --;
             }
         }
 
@@ -472,6 +483,10 @@ void remove_arquivos(char *archive, char **arquivos, int n){
         long int trunc = ftell(fp_archive);
         ftruncate(fileno(fp_archive), trunc);
         
+        for (int i = 0; i < qtd_membros; i++) {
+            printf("DIR %d: %s, UID=%d, tam=%ld, loc=%ld\n", i, dir[i].nome, dir[i].uid, dir[i].tamanho_original, dir[i].localizacao);
+        }
+
         for(int m = 0; m < qtd_membros; m++){
             fwrite(&dir[m], sizeof(struct membro), 1, fp_archive);
         }
