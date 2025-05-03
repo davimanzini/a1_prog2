@@ -98,11 +98,13 @@ void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numer
         fread(&qtd_membros, sizeof(int), 1, fp_archive); //guarda qnts arquivos tem
         fseek(fp_archive, - sizeof(int) - (qtd_membros * sizeof(struct membro)), SEEK_END); //coloca ptr no cmc do diretorio
 
-        struct membro dir[qtd_membros];
+
+        struct membro dir[qtd_membros]; //debug
 
         for(int i = 0; i < qtd_membros; i ++){ //colocamos os membros do archive dentro de um vetor de membros (dir)
             fread(&dir[i], sizeof(struct membro), 1, fp_archive);
         }
+    
 
         for(int i = 0; i < n; i++){
 
@@ -270,6 +272,12 @@ void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numer
                     continue;
                 }
 
+                struct membro aux[qtd_membros + 1]; //CRIACAO DE VET AUXILIAR!!
+
+                for(int k = 0; k < qtd_membros; k++){
+                    aux[k] = dir[k];
+                }
+
                 fseek(novo_arquivo, 0, SEEK_END);
                 long int tamanho = ftell(novo_arquivo); //salva o tamanho do novo arquivo
                 fseek(novo_arquivo, 0, SEEK_SET);
@@ -298,19 +306,19 @@ void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numer
 
                 strcpy(novo.nome, arquivos[i]);
                 novo.data_mod         = time(NULL);
-                novo.ordem            = qtd_membros; //REVISAR! ordem cmc em 0?
+                novo.ordem            = qtd_membros;
                 novo.uid              = getuid();
                 novo.tamanho_original = tamanho;
                 novo.tamanho_disco    = tamanho;
                 novo.localizacao      = pos_insercao;
 
-                dir[qtd_membros] = novo; //checar
+                aux[qtd_membros] = novo; //checar
                 qtd_membros ++;
 
-                for(int k = 0; k < qtd_membros; k++){
-                    fwrite(&dir[k], sizeof(struct membro), 1, fp_archive);
+                for(int l = 0; l < qtd_membros; l++){
+                    fwrite(&aux[l], sizeof(struct membro), 1, fp_archive);
                 }
-
+                
                 fwrite(&qtd_membros, sizeof(int), 1, fp_archive);
 
             }
@@ -350,7 +358,7 @@ void lista_informacoes(char *archive){ // -c
         return;
     }
 
-    printf("Qtd de arquivos no archive: %d\n\n", qtd_arquivos);
+    printf("Quantidade de arquivos no archive: %d\n\n", qtd_arquivos);
 
     fseek(fp_archive, -sizeof(int) - (qtd_arquivos * sizeof(struct membro)), SEEK_END);
 
@@ -389,7 +397,7 @@ void remove_arquivos(char *archive, char **arquivos, int n){
     fseek(fp_archive, 0, SEEK_END);
     long int tam_archive = ftell(fp_archive);
 
-    if (tam_archive == 0) {
+    if (tam_archive == 0) { //archive vazio
         printf("Erro: o archive está vazio!\n");
         fclose(fp_archive);
         return;
@@ -400,6 +408,11 @@ void remove_arquivos(char *archive, char **arquivos, int n){
         int qtd_membros;
         fseek(fp_archive, - sizeof(int), SEEK_END);
         fread(&qtd_membros, sizeof(int), 1, fp_archive);
+        
+        fseek(fp_archive, - 
+            sizeof(int) - 
+            (qtd_membros * sizeof(struct membro)), 
+            SEEK_END);
 
         struct membro dir[qtd_membros];
 
