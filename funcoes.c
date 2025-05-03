@@ -318,7 +318,7 @@ void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numer
                 for(int l = 0; l < qtd_membros; l++){
                     fwrite(&aux[l], sizeof(struct membro), 1, fp_archive);
                 }
-                
+
                 fwrite(&qtd_membros, sizeof(int), 1, fp_archive);
 
             }
@@ -425,9 +425,11 @@ void remove_arquivos(char *archive, char **arquivos, int n){
             - (qtd_membros * sizeof(struct membro)), 
             SEEK_END);
 
-        long int pos_trunc = ftell(fp_archive);
+        long int pos_trunc = ftell(fp_archive); //truncar soh no final?
 
         ftruncate(fileno(fp_archive), pos_trunc); //trunca o diretorio e o count
+
+        long int tam_trunc = 0; //damn
 
         for(int i = 0; i < n; i++){
 
@@ -455,19 +457,26 @@ void remove_arquivos(char *archive, char **arquivos, int n){
                         dir[k].tamanho_disco);
 
                         dir[k].localizacao -= dir[iguais].tamanho_disco;
+                        dir[k].ordem --;
                 }
 
-                fseek(fp_archive, - dir[iguais].tamanho_disco, SEEK_END); //fazer esse bloco depois do double for uma vez só?
-                long int trunc = ftell(fp_archive);
-                ftruncate(fileno(fp_archive), trunc);
-
-                qtd_membros --;
-                //COMO ATUALIZAR O DIRETORIO???
+                tam_trunc = tam_trunc + dir[iguais].tamanho_disco;
+                for(int l = iguais; l < qtd_membros - 1; l++){
+                    dir[l] = dir[l + 1];
+                } 
+                qtd_membros --; // deixar dps do laço (pq?)
             }
         }
 
-        //ESCREVER DIRETORIO
-        //ESCREVER QTD_MEMBROS
-
+        fseek(fp_archive, - tam_trunc, SEEK_END);
+        long int trunc = ftell(fp_archive);
+        ftruncate(fileno(fp_archive), trunc);
+        
+        for(int m = 0; m < qtd_membros; m++){
+            fwrite(&dir[m], sizeof(struct membro), 1, fp_archive);
+        }
+        fwrite(&qtd_membros, sizeof(int), 1, fp_archive);
     }
+
+    fclose(fp_archive);
 }
