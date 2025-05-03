@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <fcntl.h> // o que faz
 #include "funcoes.h"
+#include "lz.h"
 
 void mover(FILE *arquivo, long int inicio, long int insercao, unsigned long tamanho){ //pq unsigned?
 
@@ -382,16 +383,14 @@ void remove_arquivos(char *archive, char **arquivos, int n){
     FILE *fp_archive = fopen(archive, "rb+"); //checar mode
     if(!fp_archive){
         perror("Erro ao abrir o archive");
-        fclose(fp_archive);
         return;
     }
 
     fseek(fp_archive, 0, SEEK_END);
     long int tam_archive = ftell(fp_archive);
 
-    if(tam_archive == 0){ //archive vazio
-        
-        perror("Erro: o archive esta vazio!");
+    if (tam_archive == 0) {
+        printf("Erro: o archive está vazio!\n");
         fclose(fp_archive);
         return;
     }
@@ -423,14 +422,14 @@ void remove_arquivos(char *archive, char **arquivos, int n){
 
             for(int j = 0; j < qtd_membros; j++){
 
-                if(strcmp(arquivos[0], dir[j].nome) == 0){
+                if(strcmp(arquivos[i], dir[j].nome) == 0){
                     iguais = j;
                     break;
                 }
             }
 
             if(iguais == -1){ //nao achou no archive
-                perror("Erro: esse arquivo nao esta no archive!");
+                printf("Erro: esse arquivo nao esta no archive!\n");
                 continue; //ta certo isso??
             }
 
@@ -441,6 +440,8 @@ void remove_arquivos(char *archive, char **arquivos, int n){
                         dir[k].localizacao, 
                         dir[k].localizacao - dir[iguais].tamanho_disco, 
                         dir[k].tamanho_disco);
+
+                        dir[k].localizacao -= dir[iguais].tamanho_disco;
                 }
 
                 fseek(fp_archive, - dir[iguais].tamanho_disco, SEEK_END); //fazer esse bloco depois do double for uma vez só?
