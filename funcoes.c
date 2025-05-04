@@ -24,7 +24,7 @@ void mover(FILE *arquivo, long int inicio, long int insercao, unsigned long tama
 //separacao de funcoes
 
 
-void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numero de arquivos
+void insere_sem_compressao(char *archive, char **arquivos, int n){ //n é numero de arquivos
 
     FILE *fp_archive = fopen(archive, "rb+"); //qqr mode com r só funciona se o arquivo ja existir
     if(!fp_archive){
@@ -153,7 +153,7 @@ void inserir_sem_compressao(char *archive, char **arquivos, int n){ //n é numer
                     
                     ftruncate(fileno(fp_archive), pos_membros); //realmente necessario?
                     */
-                   
+
                     fseek(fp_archive, 0, SEEK_END);
                     for(int k = 0; k < qtd_membros; k++){
                         fwrite(&dir[k], sizeof(struct membro), 1, fp_archive);
@@ -493,5 +493,114 @@ void remove_arquivos(char *archive, char **arquivos, int n){
         fwrite(&qtd_membros, sizeof(int), 1, fp_archive);
     }
 
+    fclose(fp_archive);
+}
+
+void extrai_arquivos(char *archive, char **arquivos, int n){
+
+    FILE *fp_archive = fopen(archive, "rb+");
+    if(!fp_archive){
+        perror("Erro ao abrir o archive");
+        return;
+    }
+
+    fseek(fp_archive, 0, SEEK_END);
+    long int tam = ftell(fp_archive);
+
+    if(tam == 0){ //archive vazio
+        printf("Erro: archive vazio");
+        fclose(fp_archive);
+        return;
+    }
+
+    else{ //archive nao esta vazio
+
+        int qtd_membros;
+        fseek(fp_archive, - sizeof(int), SEEK_END);
+        fread(&qtd_membros, sizeof(int), 1, fp_archive);
+
+        struct membro dir[qtd_membros];
+
+        fseek(fp_archive, - 
+            sizeof(int) - 
+            (qtd_membros * sizeof(struct membro)), 
+            SEEK_END);
+
+        for(int i = 0; i < qtd_membros; i ++){ 
+            fread(&dir[i], sizeof(struct membro), 1, fp_archive);
+        }
+
+        if(n == 0){ //extrair todos os arquivos de archive
+
+            for(int i = 0; i < qtd_membros; i++){
+
+                FILE *arquivo_x = fopen(dir[i].nome, "wb"); //checar
+                    if(!arquivo_x){
+                        perror("Erro ao criar arquivo de extracao!");
+                        continue;
+                    }
+                    if(0 > 3){ //aqui testar se esta comprimido e descomprimir
+
+                    }
+
+                    else{ //nao esta comprimido
+
+                        fseek(fp_archive, dir[i].localizacao, SEEK_SET);
+                        
+                        char *buffer = malloc(dir[i].tamanho_disco); //checar
+                        fread(buffer, dir[i].tamanho_disco, 1, fp_archive);
+                        fwrite(buffer, dir[i].tamanho_disco, 1, arquivo_x);
+                        free(buffer);
+                    }
+                    fclose(arquivo_x);
+            }
+
+        }
+
+        else{ //extrair apenas os arquivos solicitados
+
+            for(int i = 0; i < n; i++){
+
+                int iguais = -1;
+
+                for(int j = 0; j < qtd_membros; j++){
+
+                    if(strcmp(arquivos[i], dir[j].nome) == 0){
+                        iguais = j;
+                        break;
+                    }
+                }
+
+                if(iguais == -1){ //nao achou no archive
+                    printf("Erro: esse arquivo nao esta no archive!\n");
+                    continue; //ta certo isso??
+                }
+
+                else if(iguais != -1){ //achou no archive
+
+                    FILE *arquivo_x = fopen(dir[iguais].nome, "wb"); //checar
+                    if(!arquivo_x){
+                        perror("Erro ao criar arquivo de extracao!");
+                        continue;
+                    }
+                    if(0 > 3){ //aqui testar se esta comprimido e descomprimir
+
+                    }
+
+                    else{ //nao esta comprimido
+
+                        fseek(fp_archive, dir[iguais].localizacao, SEEK_SET);
+                        
+                        char *buffer = malloc(dir[iguais].tamanho_disco); //checar
+                        fread(buffer, dir[iguais].tamanho_disco, 1, fp_archive);
+                        fwrite(buffer, dir[iguais].tamanho_disco, 1, arquivo_x);
+                        free(buffer);
+                    }
+                    fclose(arquivo_x);
+                } 
+            }   
+        }
+
+    }
     fclose(fp_archive);
 }
