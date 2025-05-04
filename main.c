@@ -40,7 +40,7 @@ int main(int argc, char *argv[]){
 
         case 1:
             printf("Executando insercao sem compressao (-ip)!\n");
-            inserir_sem_compressao(argv[2], arquivos, qtd_arquivos);
+            insere_sem_compressao(argv[2], arquivos, qtd_arquivos);
             break;
         
         case 2:
@@ -52,7 +52,8 @@ int main(int argc, char *argv[]){
             break;
         
         case 4:
-
+            printf("Executando funcao de extracao (-x)!\n");
+            extrai_arquivos(argv[2], arquivos, qtd_arquivos);
             break;
         
         case 5:
