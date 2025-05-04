@@ -17,10 +17,10 @@ struct membro{
 
 void mover(FILE *arquivo, long int inicio, long int insercao, unsigned long tamanho);
 
-void inserir_sem_compressao(char *archive, char **arquivos, int n);
+void insere_sem_compressao(char *archive, char **arquivos, int n);
 
 void lista_informacoes(char *archive);
 
 void remove_arquivos(char *archive, char **arquivos, int n);
 
-
+void extrai_arquivos(char *archive, char **arquivos, int n);
