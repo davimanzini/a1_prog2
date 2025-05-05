@@ -6,7 +6,7 @@
 
 struct membro{
 
-    char nome[1000];
+    char nome[8];
     uid_t uid;
     long int tamanho_original;
     long int tamanho_disco;
