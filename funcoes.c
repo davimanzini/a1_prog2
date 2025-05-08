@@ -604,3 +604,126 @@ void extrai_arquivos(char *archive, char **arquivos, int n){
     }
     fclose(fp_archive);
 }
+
+
+void move_arquivos(char *archive, char **arquivos){
+
+
+    FILE *fp_archive = fopen(archive, "rb");
+    if(!fp_archive){
+        perror("Erro ao abrir o archive");
+        return;
+    }
+ 
+ 
+    fseek(fp_archive, 0, SEEK_END);
+    long int tam = ftell(fp_archive);
+ 
+ 
+    if(tam <= sizeof(int)){
+        printf("Archive vazio, nao ha o que mover!");
+        return;
+    }
+ 
+ 
+    else{ //archive nao esta vazio
+
+        // checar se há target ou se é null!
+
+        int qtd_membros;
+
+        fseek(fp_archive, - sizeof(int), SEEK_END);
+        fread(&qtd_membros, sizeof(int), 1, fp_archive);
+
+        struct membro dir[qtd_membros];
+
+        fseek(fp_archive, - sizeof(int) - (qtd_membros * sizeof(struct membro)), SEEK_END);
+
+        for(int i = 0; i < qtd_membros; i++){
+            fread(&dir[i], sizeof(struct membro), 1, fp_archive);
+        }
+ 
+        //tratar primeiro caso de haver target na chamada:
+        
+        int indice_mover = -1;
+        int indice_target = -1;
+
+        //e se eu colocar um arquivo para mover depois dele mesmo? erro?
+
+        for(int i = 0; i < qtd_membros; i++){
+
+            if(strcmp(arquivos[0], dir[i].nome) == 0){ //arquivo a ser movido
+                indice_mover = i;
+            }
+            if(strcmp(arquivos[1], dir[i].nome) == 0){
+                indice_target = i;
+            }
+        }
+        
+        if(indice_mover == -1  || indice_target == -1){
+            printf("Erro: arquivo a ser movido ou arquivo target nao estao no archive!\n");
+            fclose(fp_archive);
+            return;
+        }
+ 
+        if(indice_mover == indice_target){ //caso membro a ser movido e target sejam iguais
+            prinf("Erro: indices iguais!\n");
+            flcose(fp_archive);
+            return;
+        }
+ 
+        //CASOS POSSIVIES:
+
+        //primeiro truncamos diretorio e int para termos só os arquivos no archive
+        fseek(fp_archive, - sizeof(int) - (qtd_membros * sizeof(struct membro)), SEEK_END);
+        long int pos_trunc = ftell(fp_archive);
+        ftruncate(fileno(fp_archive), pos_trunc);
+
+        long int tam_mover = dir[indice_mover].tamanho_disco; //disco ou original?? checar se ta comprimido?
+        long int tam_target = dir[indice_target].tamanho_disco; //mesma duvida
+
+        if(indice_mover < indice_target){ //mover pra depois
+
+            //escreve arquivo a mover no final do archive
+            char *buffer = malloc(tam_mover);
+            fseek(fp_archive, dir[indice_mover].localizacao, SEEK_SET);
+            fread(buffer, tam_mover, 1, fp_archive);
+            fseek(fp_archive, 0, SEEK_END);
+            fwrite(buffer, tam_mover, 1, fp_archive);
+
+            for(int i = indice_mover + 1; i <= indice_target; i++){
+
+                mover(fp_archive, dir[i].localizacao,
+                     dir[i].localizacao - tam_mover, dir[i].tamanho_disco);
+
+                dir[i].localizacao -= tam_mover;
+                dir[i].ordem --;
+            }
+
+            //ajusta ponteiro para o final do target
+            fseek(fp_archive, dir[indice_target].localizacao + tam_target,
+                 SEEK_SET);
+            
+            fwrite(buffer, tam_mover, 1, fp_archive); //coloca mover no lugar certo
+
+            fseek(fp_archive, - tam_mover, SEEK_END);
+            long int trunc_final = ftell(fp_archive);
+
+            ftruncate(fileno(fp_archive), trunc_final);
+            free(buffer);
+            
+            struct membro aux = dir[indice_mover];
+
+            for(int i = indice_mover; i < indice_target; i++){
+                dir[i] = dir[i + 1];
+            }
+
+            dir[indice_target] = aux;
+        }
+
+        if(indice_mover > indice_target){ //mover pra antes
+
+        }
+    }
+ }
+ 
