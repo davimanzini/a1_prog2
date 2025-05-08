@@ -40,7 +40,7 @@ void insere_sem_compressao(char *archive, char **arquivos, int n){ //n é numero
 
     int qtd_membros = 0;
 
-    if(tamanho_total == 0){ //archive vazio!!
+    if(tamanho_total <= sizeof(int)){ //archive vazio!!
 
         struct membro diretorio[n];
         // struct membro *diretorio = malloc(n * sizeof(struct membro));
@@ -92,7 +92,7 @@ void insere_sem_compressao(char *archive, char **arquivos, int n){ //n é numero
 
     }
 
-    else if(tamanho_total != 0){ //archive nao esta vazio
+    else{ //archive nao esta vazio
 
         fseek(fp_archive, - sizeof(int), SEEK_END); //cm nao esta vazio, o ultimo item eh um int tamanho
         fread(&qtd_membros, sizeof(int), 1, fp_archive); //guarda qnts arquivos tem
@@ -354,7 +354,7 @@ void lista_informacoes(char *archive){ // -c
     fseek(fp_archive, 0, SEEK_END);
     long int tamanho = ftell(fp_archive);
 
-    if(tamanho <= 0){
+    if(tamanho <= sizeof(int)){
         printf("Archive está vazio.\n");
         fclose(fp_archive);
         return;
@@ -408,7 +408,7 @@ void remove_arquivos(char *archive, char **arquivos, int n){
     fseek(fp_archive, 0, SEEK_END);
     long int tam_archive = ftell(fp_archive);
 
-    if (tam_archive == 0) { //archive vazio
+    if (tam_archive <= sizeof(int)) { //archive vazio
         printf("Erro: o archive está vazio!\n");
         fclose(fp_archive);
         return;
@@ -507,7 +507,7 @@ void extrai_arquivos(char *archive, char **arquivos, int n){
     fseek(fp_archive, 0, SEEK_END);
     long int tam = ftell(fp_archive);
 
-    if(tam == 0){ //archive vazio
+    if(tam <= sizeof(int)){ //archive vazio
         printf("Erro: archive vazio");
         fclose(fp_archive);
         return;
