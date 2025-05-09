@@ -24,3 +24,5 @@ void lista_informacoes(char *archive);
 void remove_arquivos(char *archive, char **arquivos, int n);
 
 void extrai_arquivos(char *archive, char **arquivos, int n);
+
+void move_arquivos(char *archive, char **arquivos);
