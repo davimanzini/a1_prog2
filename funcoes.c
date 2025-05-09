@@ -627,7 +627,7 @@ void move_arquivos(char *archive, char **arquivos){
  
  
     else{ //archive nao esta vazio
-
+        printf("a"); //debug
         // checar se há target ou se é null!
 
         int qtd_membros;
@@ -648,7 +648,6 @@ void move_arquivos(char *archive, char **arquivos){
         int indice_mover = -1;
         int indice_target = -1;
 
-        //e se eu colocar um arquivo para mover depois dele mesmo? erro?
 
         for(int i = 0; i < qtd_membros; i++){
 
@@ -659,7 +658,7 @@ void move_arquivos(char *archive, char **arquivos){
                 indice_target = i;
             }
         }
-        
+        printf("b"); //debug
         if(indice_mover == -1  || indice_target == -1){
             printf("Erro: arquivo a ser movido ou arquivo target nao estao no archive!\n");
             fclose(fp_archive);
@@ -667,8 +666,8 @@ void move_arquivos(char *archive, char **arquivos){
         }
  
         if(indice_mover == indice_target){ //caso membro a ser movido e target sejam iguais
-            prinf("Erro: indices iguais!\n");
-            flcose(fp_archive);
+            printf("Erro: indices iguais!\n");
+            fclose(fp_archive);
             return;
         }
  
@@ -690,6 +689,7 @@ void move_arquivos(char *archive, char **arquivos){
             fread(buffer, tam_mover, 1, fp_archive);
             fseek(fp_archive, 0, SEEK_END);
             fwrite(buffer, tam_mover, 1, fp_archive);
+            free(buffer);
 
             for(int i = indice_mover + 1; i <= indice_target; i++){
 
@@ -700,17 +700,22 @@ void move_arquivos(char *archive, char **arquivos){
                 dir[i].ordem --;
             }
 
+            //coloca mover no buffer
+            char *buffer_fix = malloc(tam_mover);
+            fseek(fp_archive, - tam_mover, SEEK_END);
+            fread(buffer_fix, tam_mover, 1, fp_archive);
+
             //ajusta ponteiro para o final do target
             fseek(fp_archive, dir[indice_target].localizacao + tam_target,
                  SEEK_SET);
             
-            fwrite(buffer, tam_mover, 1, fp_archive); //coloca mover no lugar certo
+            fwrite(buffer_fix, tam_mover, 1, fp_archive); //coloca mover no lugar certo
 
             fseek(fp_archive, - tam_mover, SEEK_END);
             long int trunc_final = ftell(fp_archive);
 
             ftruncate(fileno(fp_archive), trunc_final);
-            free(buffer);
+            free(buffer_fix);
             
             struct membro aux = dir[indice_mover];
 
@@ -719,10 +724,63 @@ void move_arquivos(char *archive, char **arquivos){
             }
 
             dir[indice_target] = aux;
+
+            for(int m = 0; m < qtd_membros; m++){
+                fwrite(&dir[m], sizeof(struct membro), 1, fp_archive);
+            }
+        
+            fwrite(&qtd_membros, sizeof(int), 1, fp_archive);
         }
 
         if(indice_mover > indice_target){ //mover pra antes
+            printf("d");
+            //escreve arquivo a mover no final do archive
+            char *buffer = malloc(tam_mover);
+            fseek(fp_archive, dir[indice_mover].localizacao, SEEK_SET);
+            fread(buffer, tam_mover, 1, fp_archive);
+            fseek(fp_archive, 0, SEEK_END);
+            fwrite(buffer, tam_mover, 1, fp_archive);
+            free(buffer);
 
+            printf("camila");
+            for(int i = indice_mover - 1; i > indice_target; i--){
+                printf("%ld", dir[i].localizacao); //debug
+                mover(fp_archive, dir[i].localizacao,
+                     dir[i].localizacao + tam_mover, dir[i].tamanho_disco);
+
+                dir[i].localizacao += tam_mover;
+                dir[i].ordem ++;
+            }
+            printf("e");
+            //coloca mover no buffer
+            char *buffer_fix = malloc(tam_mover);
+            fseek(fp_archive, - tam_mover, SEEK_END);
+            fread(buffer_fix, tam_mover, 1, fp_archive);
+
+            fseek(fp_archive, dir[indice_target].localizacao + tam_target,
+                 SEEK_SET);
+
+            fwrite(buffer_fix, tam_mover, 1, fp_archive); //coloca mover no lugar certo
+
+            fseek(fp_archive, - tam_mover, SEEK_END);
+            long int trunc_final = ftell(fp_archive);
+
+            ftruncate(fileno(fp_archive), trunc_final);
+            free(buffer_fix);
+
+            struct membro aux = dir[indice_mover];
+
+            for(int i = indice_mover; i > indice_target + 1; i--){
+                dir[i] = dir[i - 1];
+            }
+
+            dir[indice_target + 1] = aux;
+
+            for(int i = 0; i < qtd_membros; i++){
+                fwrite(&dir[i], sizeof(struct membro), 1, fp_archive);
+            }
+        
+            fwrite(&qtd_membros, sizeof(int), 1, fp_archive);
         }
     }
  }
