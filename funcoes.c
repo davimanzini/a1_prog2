@@ -609,7 +609,7 @@ void extrai_arquivos(char *archive, char **arquivos, int n){
 void move_arquivos(char *archive, char **arquivos){
 
 
-    FILE *fp_archive = fopen(archive, "rb");
+    FILE *fp_archive = fopen(archive, "rb+");
     if(!fp_archive){
         perror("Erro ao abrir o archive");
         return;
@@ -627,7 +627,7 @@ void move_arquivos(char *archive, char **arquivos){
  
  
     else{ //archive nao esta vazio
-        printf("a"); //debug
+        
         // checar se há target ou se é null!
 
         int qtd_membros;
@@ -658,7 +658,7 @@ void move_arquivos(char *archive, char **arquivos){
                 indice_target = i;
             }
         }
-        printf("b"); //debug
+    
         if(indice_mover == -1  || indice_target == -1){
             printf("Erro: arquivo a ser movido ou arquivo target nao estao no archive!\n");
             fclose(fp_archive);
@@ -680,6 +680,8 @@ void move_arquivos(char *archive, char **arquivos){
 
         long int tam_mover = dir[indice_mover].tamanho_disco; //disco ou original?? checar se ta comprimido?
         long int tam_target = dir[indice_target].tamanho_disco; //mesma duvida
+        printf("tamanho mover: %ld", tam_mover); //debug
+        printf("tamanho target: %ld", tam_target); //debug
 
         if(indice_mover < indice_target){ //mover pra depois
 
@@ -699,6 +701,9 @@ void move_arquivos(char *archive, char **arquivos){
                 dir[i].localizacao -= tam_mover;
                 dir[i].ordem --;
             }
+
+            dir[indice_mover].localizacao = dir[indice_target].localizacao + tam_target;
+            dir[indice_mover].ordem = dir[indice_target].ordem + 1;
 
             //coloca mover no buffer
             char *buffer_fix = malloc(tam_mover);
@@ -733,7 +738,7 @@ void move_arquivos(char *archive, char **arquivos){
         }
 
         if(indice_mover > indice_target){ //mover pra antes
-            printf("d");
+
             //escreve arquivo a mover no final do archive
             char *buffer = malloc(tam_mover);
             fseek(fp_archive, dir[indice_mover].localizacao, SEEK_SET);
@@ -742,7 +747,6 @@ void move_arquivos(char *archive, char **arquivos){
             fwrite(buffer, tam_mover, 1, fp_archive);
             free(buffer);
 
-            printf("camila");
             for(int i = indice_mover - 1; i > indice_target; i--){
                 printf("%ld", dir[i].localizacao); //debug
                 mover(fp_archive, dir[i].localizacao,
@@ -751,7 +755,10 @@ void move_arquivos(char *archive, char **arquivos){
                 dir[i].localizacao += tam_mover;
                 dir[i].ordem ++;
             }
-            printf("e");
+            
+            dir[indice_mover].localizacao = dir[indice_target].localizacao + tam_target;
+            dir[indice_mover].ordem = dir[indice_target].ordem + 1;
+
             //coloca mover no buffer
             char *buffer_fix = malloc(tam_mover);
             fseek(fp_archive, - tam_mover, SEEK_END);
