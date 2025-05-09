@@ -48,7 +48,8 @@ int main(int argc, char *argv[]){
             break;
         
         case 3:
-
+            printf("Executando funcao que move arquivos (-m)!\n");
+            move_arquivos(argv[2], arquivos);
             break;
         
         case 4:
