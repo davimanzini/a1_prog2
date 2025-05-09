@@ -49,7 +49,7 @@ int main(int argc, char *argv[]){
         
         case 3:
             printf("Executando funcao que move arquivos (-m)!\n");
-            move_arquivos(argv[2], arquivos);
+            move_arquivos(argv[2], arquivos, qtd_arquivos);
             break;
         
         case 4:
