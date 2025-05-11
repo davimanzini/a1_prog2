@@ -26,17 +26,17 @@ void mover(FILE *arquivo, long int inicio, long int insercao, unsigned long tama
 
 void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arquivos
 
-    FILE *fp_archive = fopen(archive, "rb+"); //qqr mode com r só funciona se o arquivo ja existir
-    if(!fp_archive){
-        fp_archive = fopen(archive, "wb+"); //nao podemos usar só wb pq esse mode apaga tudo do arquivo
-        if(!fp_archive){
+    FILE *arquivador = fopen(archive, "rb+"); //qqr mode com r só funciona se o arquivo ja existir
+    if(!arquivador){
+        arquivador = fopen(archive, "wb+"); //nao podemos usar só wb pq esse mode apaga tudo do arquivo
+        if(!arquivador){
             perror("Erro ao criar o archive");
             return;
         }
     }
 
-    fseek(fp_archive, 0, SEEK_END);
-    long int tamanho_total = ftell(fp_archive);
+    fseek(arquivador, 0, SEEK_END);
+    long int tamanho_total = ftell(arquivador);
 
     int qtd_membros = 0;
 
@@ -60,8 +60,8 @@ void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arqui
         }
         
         fread(buffer, 1, tamanho, fp_membro); 
-        long int posicao = ftell(fp_archive); 
-        fwrite(buffer, 1, tamanho, fp_archive); 
+        long int posicao = ftell(arquivador); 
+        fwrite(buffer, 1, tamanho, arquivador); 
         fclose(fp_membro);
         free(buffer);
 
@@ -79,25 +79,25 @@ void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arqui
 
         int qtd_membros = 1;
 
-        fseek(fp_archive, 0, SEEK_END);
-        fwrite(&diretorio[0], sizeof(struct membro), 1, fp_archive);
+        fseek(arquivador, 0, SEEK_END);
+        fwrite(&diretorio[0], sizeof(struct membro), 1, arquivador);
     
-        fwrite(&qtd_membros, sizeof(int), 1, fp_archive); 
+        fwrite(&qtd_membros, sizeof(int), 1, arquivador); 
 
-        fclose(fp_archive);
+        fclose(arquivador);
     }
 
     else{ //archive nao esta vazio
 
-        fseek(fp_archive, - sizeof(int), SEEK_END); //cm nao esta vazio, o ultimo item eh um int tamanho
-        fread(&qtd_membros, sizeof(int), 1, fp_archive); //guarda qnts arquivos tem
-        fseek(fp_archive, - sizeof(int) - (qtd_membros * sizeof(struct membro)), SEEK_END); //coloca ptr no cmc do diretorio
+        fseek(arquivador, - sizeof(int), SEEK_END); //cm nao esta vazio, o ultimo item eh um int tamanho
+        fread(&qtd_membros, sizeof(int), 1, arquivador); //guarda qnts arquivos tem
+        fseek(arquivador, - sizeof(int) - (qtd_membros * sizeof(struct membro)), SEEK_END); //coloca ptr no cmc do diretorio
 
 
         struct membro dir[qtd_membros]; 
 
         for(int i = 0; i < qtd_membros; i ++){ //colocamos os membros do archive dentro de um vetor de membros (dir)
-            fread(&dir[i], sizeof(struct membro), 1, fp_archive);
+            fread(&dir[i], sizeof(struct membro), 1, arquivador);
         }
 
         int iguais = -1;
@@ -128,19 +128,19 @@ void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arqui
                 fread(buffer, 1, tam_insert, fp_novo);
                 fclose(fp_novo);
 
-                fseek(fp_archive, dir[iguais].localizacao, SEEK_SET);
-                fwrite(buffer, 1, tam_insert, fp_archive);
+                fseek(arquivador, dir[iguais].localizacao, SEEK_SET);
+                fwrite(buffer, 1, tam_insert, arquivador);
                 free(buffer);
 
                 dir[iguais].data_mod = time(NULL); //atualiza infos membro
                 dir[iguais].uid      = getuid();
 
-                fseek(fp_archive, - sizeof(int) - 
+                fseek(arquivador, - sizeof(int) - 
                 (qtd_membros * (sizeof(struct membro))), 
                 SEEK_END);
             
                 for(int k = 0; k < qtd_membros; k++){
-                    fwrite(&dir[k], sizeof(struct membro), 1, fp_archive);
+                    fwrite(&dir[k], sizeof(struct membro), 1, arquivador);
                 }
             }
 
@@ -148,14 +148,14 @@ void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arqui
 
                 long int tam_diff = tam_insert - dir[iguais].tamanho_disco;
             
-                fseek(fp_archive, - sizeof(int) - (qtd_membros * sizeof(struct membro)), SEEK_END);
-                long int pos_trunc = ftell(fp_archive);
+                fseek(arquivador, - sizeof(int) - (qtd_membros * sizeof(struct membro)), SEEK_END);
+                long int pos_trunc = ftell(arquivador);
             
-                ftruncate(fileno(fp_archive), pos_trunc);
+                ftruncate(fileno(arquivador), pos_trunc);
 
                 for(int l = qtd_membros - 1; l > iguais; l--){ //movendo arquivos
             
-                        mover(fp_archive,
+                        mover(arquivador,
                             dir[l].localizacao,
                             dir[l].localizacao + tam_diff,
                             dir[l].tamanho_disco);
@@ -172,8 +172,8 @@ void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arqui
                 fread(buffer, 1, tam_insert, fp_novo);
                 fclose(fp_novo);
             
-                fseek(fp_archive, dir[iguais].localizacao, SEEK_SET);
-                fwrite(buffer, 1, tam_insert, fp_archive);
+                fseek(arquivador, dir[iguais].localizacao, SEEK_SET);
+                fwrite(buffer, 1, tam_insert, arquivador);
                 free(buffer);
             
                 dir[iguais].tamanho_disco    = tam_insert;
@@ -181,13 +181,13 @@ void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arqui
                 dir[iguais].data_mod         = time(NULL);
                 dir[iguais].uid              = getuid();
             
-                fseek(fp_archive, 0, SEEK_END);
+                fseek(arquivador, 0, SEEK_END);
             
                 for (int m = 0; m < qtd_membros; m++) {
-                    fwrite(&dir[m], sizeof(struct membro), 1, fp_archive);
+                    fwrite(&dir[m], sizeof(struct membro), 1, arquivador);
                 }
             
-                fwrite(&qtd_membros, sizeof(int), 1, fp_archive);
+                fwrite(&qtd_membros, sizeof(int), 1, arquivador);
             }
 
             
@@ -197,7 +197,7 @@ void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arqui
 
                 for(int k = qtd_membros - 1; k >= 0; k--){
                     if(dir[k].localizacao > dir[iguais].localizacao){
-                        mover(fp_archive, dir[k].localizacao, dir[k].localizacao - tam_diff, dir[k].tamanho_disco);
+                        mover(arquivador, dir[k].localizacao, dir[k].localizacao - tam_diff, dir[k].tamanho_disco);
                         dir[k].localizacao -= tam_diff;
                     }
                 }
@@ -211,8 +211,8 @@ void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arqui
                 fread(buffer, 1, tam_insert, fp_novo);
                 fclose(fp_novo);
 
-                fseek(fp_archive, dir[iguais].localizacao, SEEK_SET);
-                fwrite(buffer, 1, tam_insert, fp_archive);
+                fseek(arquivador, dir[iguais].localizacao, SEEK_SET);
+                fwrite(buffer, 1, tam_insert, arquivador);
                 free(buffer);
 
                 dir[iguais].tamanho_disco    = tam_insert;
@@ -220,23 +220,23 @@ void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arqui
                 dir[iguais].data_mod         = time(NULL);
                 dir[iguais].uid              = getuid();
 
-                fseek(fp_archive, - 
+                fseek(arquivador, - 
                     sizeof(int) - 
                     (qtd_membros * sizeof(struct membro)) - 
                     tam_diff, 
                     SEEK_END);
                 
-                long int pos_trunc = ftell(fp_archive);
+                long int pos_trunc = ftell(arquivador);
                 
-                ftruncate(fileno(fp_archive), pos_trunc);
+                ftruncate(fileno(arquivador), pos_trunc);
 
-                fseek(fp_archive, 0, SEEK_END);
+                fseek(arquivador, 0, SEEK_END);
 
                 for (int m = 0; m < qtd_membros; m++) {
-                    fwrite(&dir[m], sizeof(struct membro), 1, fp_archive);
+                    fwrite(&dir[m], sizeof(struct membro), 1, arquivador);
                 }
 
-                fwrite(&qtd_membros, sizeof(int), 1, fp_archive);
+                fwrite(&qtd_membros, sizeof(int), 1, arquivador);
             }
         }
 
@@ -245,7 +245,7 @@ void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arqui
             FILE *novo_arquivo = fopen(arquivo, "rb+");
             if(!novo_arquivo){
                 perror("Erro ao abrir novo arquivo");
-                fclose(fp_archive);
+                fclose(arquivador);
             }
             //nao pode fazer isso, aqui esta o erro
             struct membro *aux = malloc((qtd_membros + 1) * sizeof(struct membro));
@@ -262,20 +262,20 @@ void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arqui
             if(!buffer){
                 perror("Erro alocando buffer");
                 fclose(novo_arquivo);
-                fclose(fp_archive);
+                fclose(arquivador);
             }
 
             fread(buffer, 1, tamanho, novo_arquivo);
             fclose(novo_arquivo);
 
-            fseek(fp_archive, 0, SEEK_END); 
+            fseek(arquivador, 0, SEEK_END); 
 
-            long int pos_insercao = ftell(fp_archive) - sizeof(int) - (qtd_membros * sizeof(struct membro));
+            long int pos_insercao = ftell(arquivador) - sizeof(int) - (qtd_membros * sizeof(struct membro));
 
-            ftruncate(fileno(fp_archive), pos_insercao); //truncamos o arquivo, tiramos diretorio e int
+            ftruncate(fileno(arquivador), pos_insercao); //truncamos o arquivo, tiramos diretorio e int
 
-            fseek(fp_archive, 0, SEEK_END);
-            fwrite(buffer, tamanho, 1, fp_archive); //escreve novo arq no archive
+            fseek(arquivador, 0, SEEK_END);
+            fwrite(buffer, tamanho, 1, arquivador); //escreve novo arq no archive
 
             free(buffer);
 
@@ -293,51 +293,51 @@ void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arqui
             qtd_membros ++;
 
             for(int l = 0; l < qtd_membros; l++){
-                fwrite(&aux[l], sizeof(struct membro), 1, fp_archive);
+                fwrite(&aux[l], sizeof(struct membro), 1, arquivador);
             }
 
-            fwrite(&qtd_membros, sizeof(int), 1, fp_archive);
+            fwrite(&qtd_membros, sizeof(int), 1, arquivador);
             free(aux);
         }
     }
-    fclose(fp_archive);
+    fclose(arquivador);
 }
 //separacao de funcoes
 
 
 void lista_informacoes(char *archive){ // -c
 
-    FILE *fp_archive = fopen(archive, "rb");
-    if(!fp_archive){
+    FILE *arquivador = fopen(archive, "rb");
+    if(!arquivador){
         perror("Erro ao abrir o archive");
         return;
     }
 
-    fseek(fp_archive, 0, SEEK_END);
-    long int tamanho = ftell(fp_archive);
+    fseek(arquivador, 0, SEEK_END);
+    long int tamanho = ftell(arquivador);
 
     if(tamanho <= sizeof(int)){
         printf("Archive está vazio.\n");
-        fclose(fp_archive);
+        fclose(arquivador);
         return;
     }
 
     int qtd_arquivos = 0;
 
-    fseek(fp_archive, -sizeof(int), SEEK_END);
-    if(fread(&qtd_arquivos, sizeof(int), 1, fp_archive) != 1){
+    fseek(arquivador, -sizeof(int), SEEK_END);
+    if(fread(&qtd_arquivos, sizeof(int), 1, arquivador) != 1){
         perror("Erro ao ler qtd_arquivos");
-        fclose(fp_archive);
+        fclose(arquivador);
         return;
     }
 
     printf("Quantidade de arquivos no archive: %d\n\n", qtd_arquivos);
 
-    fseek(fp_archive, -sizeof(int) - (qtd_arquivos * sizeof(struct membro)), SEEK_END);
+    fseek(arquivador, -sizeof(int) - (qtd_arquivos * sizeof(struct membro)), SEEK_END);
 
     for(int i = 0; i < qtd_arquivos; i++){
         struct membro dir;
-        if(fread(&dir, sizeof(struct membro), 1, fp_archive) != 1){  //precisa disso?
+        if(fread(&dir, sizeof(struct membro), 1, arquivador) != 1){  //precisa disso?
             perror("Erro ao ler struct membro");
             break;
         }
@@ -355,34 +355,34 @@ void lista_informacoes(char *archive){ // -c
         printf("Localizacao no archive: %ld\n\n", dir.localizacao);
     }
 
-    fclose(fp_archive);
+    fclose(arquivador);
 }
 
 
 void remove_arquivos(char *archive, char **arquivos, int n){
 
-    FILE *fp_archive = fopen(archive, "rb+");
-    if(!fp_archive){
+    FILE *arquivador = fopen(archive, "rb+");
+    if(!arquivador){
         perror("Erro ao abrir o archive");
         return;
     }
 
-    fseek(fp_archive, 0, SEEK_END);
-    long int tam_archive = ftell(fp_archive);
+    fseek(arquivador, 0, SEEK_END);
+    long int tam_archive = ftell(arquivador);
 
     if (tam_archive <= sizeof(int)) { //archive vazio
         printf("Erro: o archive está vazio!\n");
-        fclose(fp_archive);
+        fclose(arquivador);
         return;
     }
 
     else{ //archive nao esta vazio
 
         int qtd_membros;
-        fseek(fp_archive, - sizeof(int), SEEK_END);
-        fread(&qtd_membros, sizeof(int), 1, fp_archive);
+        fseek(arquivador, - sizeof(int), SEEK_END);
+        fread(&qtd_membros, sizeof(int), 1, arquivador);
         
-        fseek(fp_archive, - 
+        fseek(arquivador, - 
             sizeof(int) - 
             (qtd_membros * sizeof(struct membro)), 
             SEEK_END);
@@ -390,17 +390,17 @@ void remove_arquivos(char *archive, char **arquivos, int n){
         struct membro dir[qtd_membros];
 
         for(int i = 0; i < qtd_membros; i ++){ //colocamos os membros do archive dentro de um vetor de membros (dir)
-            fread(&dir[i], sizeof(struct membro), 1, fp_archive);
+            fread(&dir[i], sizeof(struct membro), 1, arquivador);
         }
 
-        fseek(fp_archive, 
+        fseek(arquivador, 
             - sizeof(int) 
             - (qtd_membros * sizeof(struct membro)), 
             SEEK_END);
 
-        long int pos_trunc = ftell(fp_archive); //truncar soh no final?
+        long int pos_trunc = ftell(arquivador); //truncar soh no final?
 
-        ftruncate(fileno(fp_archive), pos_trunc); //trunca o diretorio e o count
+        ftruncate(fileno(arquivador), pos_trunc); //trunca o diretorio e o count
 
         long int tam_trunc = 0; //damn
 
@@ -424,7 +424,7 @@ void remove_arquivos(char *archive, char **arquivos, int n){
             else if(iguais != -1){ //achou no archive
 
                 for(int k = iguais + 1; k < qtd_membros; k++){
-                    mover(fp_archive, 
+                    mover(arquivador, 
                         dir[k].localizacao, 
                         dir[k].localizacao - dir[iguais].tamanho_disco, 
                         dir[k].tamanho_disco);
@@ -441,51 +441,51 @@ void remove_arquivos(char *archive, char **arquivos, int n){
             }
         }
 
-        fseek(fp_archive, - tam_trunc, SEEK_END);
-        long int trunc = ftell(fp_archive);
-        ftruncate(fileno(fp_archive), trunc);
+        fseek(arquivador, - tam_trunc, SEEK_END);
+        long int trunc = ftell(arquivador);
+        ftruncate(fileno(arquivador), trunc);
 
         for(int m = 0; m < qtd_membros; m++){
-            fwrite(&dir[m], sizeof(struct membro), 1, fp_archive);
+            fwrite(&dir[m], sizeof(struct membro), 1, arquivador);
         }
-        fwrite(&qtd_membros, sizeof(int), 1, fp_archive);
+        fwrite(&qtd_membros, sizeof(int), 1, arquivador);
     }
 
-    fclose(fp_archive);
+    fclose(arquivador);
 }
 
 void extrai_arquivos(char *archive, char **arquivos, int n){
 
-    FILE *fp_archive = fopen(archive, "rb+");
-    if(!fp_archive){
+    FILE *arquivador = fopen(archive, "rb+");
+    if(!arquivador){
         perror("Erro ao abrir o archive");
         return;
     }
 
-    fseek(fp_archive, 0, SEEK_END);
-    long int tam = ftell(fp_archive);
+    fseek(arquivador, 0, SEEK_END);
+    long int tam = ftell(arquivador);
 
     if(tam <= sizeof(int)){ //archive vazio
         printf("Erro: archive vazio");
-        fclose(fp_archive);
+        fclose(arquivador);
         return;
     }
 
     else{ //archive nao esta vazio
 
         int qtd_membros;
-        fseek(fp_archive, - sizeof(int), SEEK_END);
-        fread(&qtd_membros, sizeof(int), 1, fp_archive);
+        fseek(arquivador, - sizeof(int), SEEK_END);
+        fread(&qtd_membros, sizeof(int), 1, arquivador);
 
         struct membro dir[qtd_membros];
 
-        fseek(fp_archive, - 
+        fseek(arquivador, - 
             sizeof(int) - 
             (qtd_membros * sizeof(struct membro)), 
             SEEK_END);
 
         for(int i = 0; i < qtd_membros; i ++){ 
-            fread(&dir[i], sizeof(struct membro), 1, fp_archive);
+            fread(&dir[i], sizeof(struct membro), 1, arquivador);
         }
 
         if(n == 0){ //extrair todos os arquivos de archive
@@ -503,10 +503,10 @@ void extrai_arquivos(char *archive, char **arquivos, int n){
 
                     else{ //nao esta comprimido
 
-                        fseek(fp_archive, dir[i].localizacao, SEEK_SET);
+                        fseek(arquivador, dir[i].localizacao, SEEK_SET);
                         
                         char *buffer = malloc(dir[i].tamanho_disco); //checar
-                        fread(buffer, dir[i].tamanho_disco, 1, fp_archive);
+                        fread(buffer, dir[i].tamanho_disco, 1, arquivador);
                         fwrite(buffer, dir[i].tamanho_disco, 1, arquivo_x);
                         free(buffer);
                     }
@@ -547,10 +547,10 @@ void extrai_arquivos(char *archive, char **arquivos, int n){
 
                     else{ //nao esta comprimido
 
-                        fseek(fp_archive, dir[iguais].localizacao, SEEK_SET);
+                        fseek(arquivador, dir[iguais].localizacao, SEEK_SET);
                         
                         char *buffer = malloc(dir[iguais].tamanho_disco); //checar
-                        fread(buffer, dir[iguais].tamanho_disco, 1, fp_archive);
+                        fread(buffer, dir[iguais].tamanho_disco, 1, arquivador);
                         fwrite(buffer, dir[iguais].tamanho_disco, 1, arquivo_x);
                         free(buffer);
                     }
@@ -560,27 +560,27 @@ void extrai_arquivos(char *archive, char **arquivos, int n){
         }
 
     }
-    fclose(fp_archive);
+    fclose(arquivador);
 }
 
 
 void move_arquivos(char *archive, char **arquivos, int n){
 
 
-    FILE *fp_archive = fopen(archive, "rb+");
-    if(!fp_archive){
+    FILE *arquivador = fopen(archive, "rb+");
+    if(!arquivador){
         perror("Erro ao abrir o archive");
         return;
     }
  
  
-    fseek(fp_archive, 0, SEEK_END);
-    long int tam = ftell(fp_archive);
+    fseek(arquivador, 0, SEEK_END);
+    long int tam = ftell(arquivador);
  
  
     if(tam <= sizeof(int)){
         printf("Archive vazio, nao ha o que mover!");
-        fclose(fp_archive);
+        fclose(arquivador);
         return;
     }
  
@@ -591,15 +591,15 @@ void move_arquivos(char *archive, char **arquivos, int n){
 
         int qtd_membros;
 
-        fseek(fp_archive, - sizeof(int), SEEK_END);
-        fread(&qtd_membros, sizeof(int), 1, fp_archive);
+        fseek(arquivador, - sizeof(int), SEEK_END);
+        fread(&qtd_membros, sizeof(int), 1, arquivador);
 
         struct membro dir[qtd_membros];
 
-        fseek(fp_archive, - sizeof(int) - (qtd_membros * sizeof(struct membro)), SEEK_END);
+        fseek(arquivador, - sizeof(int) - (qtd_membros * sizeof(struct membro)), SEEK_END);
 
         for(int i = 0; i < qtd_membros; i++){
-            fread(&dir[i], sizeof(struct membro), 1, fp_archive);
+            fread(&dir[i], sizeof(struct membro), 1, arquivador);
         }
  
         
@@ -614,35 +614,35 @@ void move_arquivos(char *archive, char **arquivos, int n){
 
             if(indice_mover == -1){
                 printf("Erro: arquivo a ser movido nao esta no archive! \n");
-                fclose(fp_archive);
+                fclose(arquivador);
                 return;
             }
 
             if(strcmp(dir[indice_mover].nome, dir[0].nome) == 0){
                 printf("Erro: arquivo a ser movido ja esta no inicio do archive! \n");
-                fclose(fp_archive);
+                fclose(arquivador);
                 return;
             }
 
             long int tam_mover = dir[indice_mover].tamanho_disco;
 
             //trunca diretorio e count
-            fseek(fp_archive, - sizeof(int) - (qtd_membros * sizeof(struct membro)), SEEK_END);
-            long int pos_trunc = ftell(fp_archive);
-            ftruncate(fileno(fp_archive), pos_trunc);
+            fseek(arquivador, - sizeof(int) - (qtd_membros * sizeof(struct membro)), SEEK_END);
+            long int pos_trunc = ftell(arquivador);
+            ftruncate(fileno(arquivador), pos_trunc);
 
             //le arquivo mover para o buffer
             char *buffer = malloc(dir[indice_mover].tamanho_disco);
-            fseek(fp_archive, dir[indice_mover].localizacao, SEEK_SET);
-            fread(buffer, tam_mover, 1, fp_archive);
+            fseek(arquivador, dir[indice_mover].localizacao, SEEK_SET);
+            fread(buffer, tam_mover, 1, arquivador);
 
-            fseek(fp_archive, 0, SEEK_END);
-            fwrite(buffer, tam_mover, 1, fp_archive);
+            fseek(arquivador, 0, SEEK_END);
+            fwrite(buffer, tam_mover, 1, arquivador);
             free(buffer);
 
             for(int i = indice_mover - 1; i > -1; i--){
 
-                mover(fp_archive, dir[i].localizacao,
+                mover(arquivador, dir[i].localizacao,
                      dir[i].localizacao + tam_mover, dir[i].tamanho_disco);
 
                 dir[i].localizacao += tam_mover;
@@ -651,19 +651,19 @@ void move_arquivos(char *archive, char **arquivos, int n){
 
             //coloca o mover no comeco do arquivo
             char *buffer_fix = malloc(tam_mover);
-            fseek(fp_archive, - tam_mover, SEEK_END);
-            fread(buffer, tam_mover, 1, fp_archive);
-            fseek(fp_archive, 0, SEEK_SET);
-            fwrite(buffer, tam_mover, 1, fp_archive);
+            fseek(arquivador, - tam_mover, SEEK_END);
+            fread(buffer, tam_mover, 1, arquivador);
+            fseek(arquivador, 0, SEEK_SET);
+            fwrite(buffer, tam_mover, 1, arquivador);
             free(buffer_fix);
 
             dir[indice_mover].localizacao = 0;
             dir[indice_mover].ordem = 0;
 
-            fseek(fp_archive, - tam_mover, SEEK_END);
-            long int trunc_final = ftell(fp_archive);
+            fseek(arquivador, - tam_mover, SEEK_END);
+            long int trunc_final = ftell(arquivador);
 
-            ftruncate(fileno(fp_archive), trunc_final);
+            ftruncate(fileno(arquivador), trunc_final);
             
             struct membro aux = dir[indice_mover];
 
@@ -674,10 +674,10 @@ void move_arquivos(char *archive, char **arquivos, int n){
             dir[0] = aux;
 
             for(int m = 0; m < qtd_membros; m++){
-                fwrite(&dir[m], sizeof(struct membro), 1, fp_archive);
+                fwrite(&dir[m], sizeof(struct membro), 1, arquivador);
             }
         
-            fwrite(&qtd_membros, sizeof(int), 1, fp_archive);
+            fwrite(&qtd_membros, sizeof(int), 1, arquivador);
 
         }
 
@@ -698,22 +698,22 @@ void move_arquivos(char *archive, char **arquivos, int n){
         
             if(indice_mover == -1  || indice_target == -1){
                 printf("Erro: arquivo a ser movido ou arquivo target nao estao no archive!\n");
-                fclose(fp_archive);
+                fclose(arquivador);
                 return;
             }
     
             if(indice_mover == indice_target){ //caso membro a ser movido e target sejam iguais
                 printf("Erro: indices iguais!\n");
-                fclose(fp_archive);
+                fclose(arquivador);
                 return;
             }
     
             //CASOS POSSIVIES:
 
             //primeiro truncamos diretorio e int para termos só os arquivos no archive
-            fseek(fp_archive, - sizeof(int) - (qtd_membros * sizeof(struct membro)), SEEK_END);
-            long int pos_trunc = ftell(fp_archive);
-            ftruncate(fileno(fp_archive), pos_trunc);
+            fseek(arquivador, - sizeof(int) - (qtd_membros * sizeof(struct membro)), SEEK_END);
+            long int pos_trunc = ftell(arquivador);
+            ftruncate(fileno(arquivador), pos_trunc);
 
             long int tam_mover = dir[indice_mover].tamanho_disco; //disco ou original?? checar se ta comprimido?
             long int tam_target = dir[indice_target].tamanho_disco; //mesma duvida
@@ -722,15 +722,15 @@ void move_arquivos(char *archive, char **arquivos, int n){
 
                 //escreve arquivo a mover no final do archive
                 char *buffer = malloc(tam_mover);
-                fseek(fp_archive, dir[indice_mover].localizacao, SEEK_SET);
-                fread(buffer, tam_mover, 1, fp_archive);
-                fseek(fp_archive, 0, SEEK_END);
-                fwrite(buffer, tam_mover, 1, fp_archive);
+                fseek(arquivador, dir[indice_mover].localizacao, SEEK_SET);
+                fread(buffer, tam_mover, 1, arquivador);
+                fseek(arquivador, 0, SEEK_END);
+                fwrite(buffer, tam_mover, 1, arquivador);
                 free(buffer);
 
                 for(int i = indice_mover + 1; i <= indice_target; i++){
 
-                    mover(fp_archive, dir[i].localizacao,
+                    mover(arquivador, dir[i].localizacao,
                         dir[i].localizacao - tam_mover, dir[i].tamanho_disco);
 
                     dir[i].localizacao -= tam_mover;
@@ -739,23 +739,23 @@ void move_arquivos(char *archive, char **arquivos, int n){
 
                 //coloca mover no buffer
                 char *buffer_fix = malloc(tam_mover);
-                fseek(fp_archive, - tam_mover, SEEK_END);
-                fread(buffer_fix, tam_mover, 1, fp_archive);
+                fseek(arquivador, - tam_mover, SEEK_END);
+                fread(buffer_fix, tam_mover, 1, arquivador);
 
                 //ajusta ponteiro para o final do target
-                fseek(fp_archive, dir[indice_target].localizacao + tam_target,
+                fseek(arquivador, dir[indice_target].localizacao + tam_target,
                     SEEK_SET);
                 
-                fwrite(buffer_fix, tam_mover, 1, fp_archive); //coloca mover no lugar certo
+                fwrite(buffer_fix, tam_mover, 1, arquivador); //coloca mover no lugar certo
                 free(buffer_fix);
 
                 dir[indice_mover].localizacao = dir[indice_target].localizacao + tam_target;
                 dir[indice_mover].ordem = dir[indice_target].ordem + 1;
 
-                fseek(fp_archive, - tam_mover, SEEK_END);
-                long int trunc_final = ftell(fp_archive);
+                fseek(arquivador, - tam_mover, SEEK_END);
+                long int trunc_final = ftell(arquivador);
 
-                ftruncate(fileno(fp_archive), trunc_final);
+                ftruncate(fileno(arquivador), trunc_final);
                 
                 struct membro aux = dir[indice_mover];
 
@@ -766,24 +766,24 @@ void move_arquivos(char *archive, char **arquivos, int n){
                 dir[indice_target] = aux;
 
                 for(int m = 0; m < qtd_membros; m++){
-                    fwrite(&dir[m], sizeof(struct membro), 1, fp_archive);
+                    fwrite(&dir[m], sizeof(struct membro), 1, arquivador);
                 }
             
-                fwrite(&qtd_membros, sizeof(int), 1, fp_archive);
+                fwrite(&qtd_membros, sizeof(int), 1, arquivador);
             }
 
             if(indice_mover > indice_target){ //mover pra antes
 
                 //escreve arquivo a mover no final do archive
                 char *buffer = malloc(tam_mover);
-                fseek(fp_archive, dir[indice_mover].localizacao, SEEK_SET);
-                fread(buffer, tam_mover, 1, fp_archive);
-                fseek(fp_archive, 0, SEEK_END);
-                fwrite(buffer, tam_mover, 1, fp_archive);
+                fseek(arquivador, dir[indice_mover].localizacao, SEEK_SET);
+                fread(buffer, tam_mover, 1, arquivador);
+                fseek(arquivador, 0, SEEK_END);
+                fwrite(buffer, tam_mover, 1, arquivador);
                 free(buffer);
 
                 for(int i = indice_mover - 1; i > indice_target; i--){
-                    mover(fp_archive, dir[i].localizacao,
+                    mover(arquivador, dir[i].localizacao,
                         dir[i].localizacao + tam_mover, dir[i].tamanho_disco);
 
                     dir[i].localizacao += tam_mover;
@@ -792,22 +792,22 @@ void move_arquivos(char *archive, char **arquivos, int n){
 
                 //coloca mover no buffer
                 char *buffer_fix = malloc(tam_mover);
-                fseek(fp_archive, - tam_mover, SEEK_END);
-                fread(buffer_fix, tam_mover, 1, fp_archive);
+                fseek(arquivador, - tam_mover, SEEK_END);
+                fread(buffer_fix, tam_mover, 1, arquivador);
 
-                fseek(fp_archive, dir[indice_target].localizacao + tam_target,
+                fseek(arquivador, dir[indice_target].localizacao + tam_target,
                     SEEK_SET);
 
-                fwrite(buffer_fix, tam_mover, 1, fp_archive); //coloca mover no lugar certo
+                fwrite(buffer_fix, tam_mover, 1, arquivador); //coloca mover no lugar certo
                 free(buffer_fix);
 
                 dir[indice_mover].localizacao = dir[indice_target].localizacao + tam_target;
                 dir[indice_mover].ordem = dir[indice_target].ordem + 1;
 
-                fseek(fp_archive, - tam_mover, SEEK_END);
-                long int trunc_final = ftell(fp_archive);
+                fseek(arquivador, - tam_mover, SEEK_END);
+                long int trunc_final = ftell(arquivador);
 
-                ftruncate(fileno(fp_archive), trunc_final);
+                ftruncate(fileno(arquivador), trunc_final);
 
                 struct membro aux = dir[indice_mover];
 
@@ -818,13 +818,13 @@ void move_arquivos(char *archive, char **arquivos, int n){
                 dir[indice_target + 1] = aux;
 
                 for(int i = 0; i < qtd_membros; i++){
-                    fwrite(&dir[i], sizeof(struct membro), 1, fp_archive);
+                    fwrite(&dir[i], sizeof(struct membro), 1, arquivador);
                 }
             
-                fwrite(&qtd_membros, sizeof(int), 1, fp_archive);
+                fwrite(&qtd_membros, sizeof(int), 1, arquivador);
             }
         }
-        fclose(fp_archive);
+        fclose(arquivador);
     }
  }
  
