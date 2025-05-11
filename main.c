@@ -40,11 +40,16 @@ int main(int argc, char *argv[]){
 
         case 1:
             printf("Executando insercao sem compressao (-ip)!\n");
-            insere_sem_compressao(argv[2], arquivos, qtd_arquivos);
+            for(int i = 0; i < qtd_arquivos; i++){
+                insere(argv[2], arquivos[i], 0);
+            }
             break;
         
         case 2:
-
+            printf("Executando insercao com compressao (-ic)!\n");
+            for(int i = 0; i < qtd_arquivos; i++){
+                insere(argv[2], arquivos[i], 1);
+            }
             break;
         
         case 3:
