@@ -12,12 +12,12 @@ struct membro{
     long int tamanho_disco;
     time_t data_mod;
     long int ordem;
-    long int localizacao; //endereço do arquivo em archive
+    long int localizacao;
 };
 
 void mover(FILE *arquivo, long int inicio, long int insercao, unsigned long tamanho);
 
-void insere_sem_compressao(char *archive, char **arquivos, int n);
+void insere(char *archive, char *arquivo, int comprimir);
 
 void lista_informacoes(char *archive);
 
