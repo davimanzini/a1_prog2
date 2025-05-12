@@ -3,11 +3,11 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <fcntl.h> // o que faz
+#include <fcntl.h>
 #include "funcoes.h"
 #include "lz.h"
 
-void mover(FILE *arquivo, long int inicio, long int insercao, unsigned long tamanho){ //pq unsigned?
+void mover(FILE *arquivo, long int inicio, long int insercao, unsigned long tamanho){
 
     char *buffer = malloc(tamanho);
 
@@ -24,11 +24,11 @@ void mover(FILE *arquivo, long int inicio, long int insercao, unsigned long tama
 //separacao de funcoes
 
 
-void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arquivos
+void insere(char *archive, char *arquivo, int comprimir){
 
-    FILE *arquivador = fopen(archive, "rb+"); //qqr mode com r só funciona se o arquivo ja existir
+    FILE *arquivador = fopen(archive, "rb+");
     if(!arquivador){
-        arquivador = fopen(archive, "wb+"); //nao podemos usar só wb pq esse mode apaga tudo do arquivo
+        arquivador = fopen(archive, "wb+");
         if(!arquivador){
             perror("Erro ao criar o archive");
             return;
@@ -40,7 +40,7 @@ void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arqui
 
     int qtd_membros = 0;
 
-    if(tamanho_total <= sizeof(int)){ //archive vazio!!
+    if(tamanho_total <= sizeof(int)){ //archive vazio
 
         struct membro diretorio[1];
 
@@ -61,7 +61,29 @@ void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arqui
         
         fread(buffer, 1, tamanho, fp_membro); 
         long int posicao = ftell(arquivador); 
-        fwrite(buffer, 1, tamanho, arquivador); 
+
+        long int tam_comp = tamanho;
+        if(comprimir){ //caso for -ic
+            
+            char *buffer_comp = malloc(tamanho * 1.004 + 1);
+            
+            tam_comp = (long int) LZ_Compress((unsigned char *) buffer, 
+            (unsigned char *) buffer_comp, tamanho);
+
+            printf("%ld", tam_comp);
+            if(tam_comp >= tamanho){
+                free(buffer_comp);
+                tam_comp = tamanho;
+                printf("Tamanho comprimido não ficou menor! \n");
+            }
+
+            else{
+                free(buffer);
+                buffer = buffer_comp;
+            }
+        }
+
+        fwrite(buffer, 1, tam_comp, arquivador); 
         fclose(fp_membro);
         free(buffer);
 
@@ -72,7 +94,7 @@ void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arqui
         novo_membro.ordem            = 0;
         novo_membro.uid              = getuid();
         novo_membro.tamanho_original = tamanho;
-        novo_membro.tamanho_disco    = tamanho;
+        novo_membro.tamanho_disco    = tam_comp;
         novo_membro.localizacao      = posicao;
 
         diretorio[0] = novo_membro;
@@ -89,14 +111,14 @@ void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arqui
 
     else{ //archive nao esta vazio
 
-        fseek(arquivador, - sizeof(int), SEEK_END); //cm nao esta vazio, o ultimo item eh um int tamanho
-        fread(&qtd_membros, sizeof(int), 1, arquivador); //guarda qnts arquivos tem
+        fseek(arquivador, - sizeof(int), SEEK_END); //int count no 
+        fread(&qtd_membros, sizeof(int), 1, arquivador);
         fseek(arquivador, - sizeof(int) - (qtd_membros * sizeof(struct membro)), SEEK_END); //coloca ptr no cmc do diretorio
 
 
         struct membro dir[qtd_membros]; 
 
-        for(int i = 0; i < qtd_membros; i ++){ //colocamos os membros do archive dentro de um vetor de membros (dir)
+        for(int i = 0; i < qtd_membros; i ++){
             fread(&dir[i], sizeof(struct membro), 1, arquivador);
         }
 
@@ -121,15 +143,41 @@ void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arqui
             long int tam_insert = ftell(fp_novo); //tamanho do arq a ser inserido
             fseek(fp_novo, 0, SEEK_SET);
             
-            if(tam_insert == dir[iguais].tamanho_disco){ //tamanhos iguais
+            char *buffer = malloc(tam_insert);
+                if(!buffer){
+                    perror("Erro ao alocar buffer");
+                    fclose(fp_novo);
+                }
 
-                char *buffer = malloc(tam_insert);
+            fread(buffer, 1, tam_insert, fp_novo);
+            fclose(fp_novo);
 
-                fread(buffer, 1, tam_insert, fp_novo);
-                fclose(fp_novo);
+            //caso for -ic
+            long int tam_comp = tam_insert;
+            if(comprimir){
+                
+                char *buffer_comp = malloc(tam_insert * 1.004 + 1);
+                
+                tam_comp = (long int) LZ_Compress((unsigned char *) buffer, 
+                (unsigned char *) buffer_comp, tam_insert);
+
+                printf("%ld", tam_comp);
+                if(tam_comp >= tam_insert){
+                    free(buffer_comp);
+                    tam_comp = tam_insert;
+                    printf("Tamanho comprimido nao ficou menor! \n");
+                }
+
+                else{
+                    free(buffer);
+                    buffer = buffer_comp;
+                }
+            }
+
+            if(tam_comp == dir[iguais].tamanho_disco){ //tamanhos iguais
 
                 fseek(arquivador, dir[iguais].localizacao, SEEK_SET);
-                fwrite(buffer, 1, tam_insert, arquivador);
+                fwrite(buffer, 1, tam_comp, arquivador);
                 free(buffer);
 
                 dir[iguais].data_mod = time(NULL); //atualiza infos membro
@@ -144,16 +192,17 @@ void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arqui
                 }
             }
 
-            else if(tam_insert > dir[iguais].tamanho_disco){ //tamanho novo maior
+            else if(tam_comp > dir[iguais].tamanho_disco){ //tamanho novo maior
 
-                long int tam_diff = tam_insert - dir[iguais].tamanho_disco;
+                long int tam_diff = tam_comp - dir[iguais].tamanho_disco;
             
-                fseek(arquivador, - sizeof(int) - (qtd_membros * sizeof(struct membro)), SEEK_END);
+                fseek(arquivador, - sizeof(int) - 
+                (qtd_membros * sizeof(struct membro)), SEEK_END);
                 long int pos_trunc = ftell(arquivador);
             
                 ftruncate(fileno(arquivador), pos_trunc);
 
-                for(int l = qtd_membros - 1; l > iguais; l--){ //movendo arquivos
+                for(int l = qtd_membros - 1; l > iguais; l--){
             
                         mover(arquivador,
                             dir[l].localizacao,
@@ -163,20 +212,11 @@ void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arqui
                             dir[l].localizacao += tam_diff;
                 }
             
-                char *buffer = malloc(tam_insert);
-                if(!buffer){
-                    perror("Erro ao alocando buffer");
-                    fclose(fp_novo);
-                }
-            
-                fread(buffer, 1, tam_insert, fp_novo);
-                fclose(fp_novo);
-            
                 fseek(arquivador, dir[iguais].localizacao, SEEK_SET);
-                fwrite(buffer, 1, tam_insert, arquivador);
+                fwrite(buffer, 1, tam_comp, arquivador);
                 free(buffer);
             
-                dir[iguais].tamanho_disco    = tam_insert;
+                dir[iguais].tamanho_disco    = tam_comp;
                 dir[iguais].tamanho_original = tam_insert;
                 dir[iguais].data_mod         = time(NULL);
                 dir[iguais].uid              = getuid();
@@ -191,31 +231,26 @@ void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arqui
             }
 
             
-            else if(tam_insert < dir[iguais].tamanho_disco){ //tamanho antigo maior
+            else if(tam_comp < dir[iguais].tamanho_disco){ //tamanho antigo maior
 
-                long int tam_diff = dir[iguais].tamanho_disco - tam_insert;
+                long int tam_diff = dir[iguais].tamanho_disco - tam_comp;
 
                 for(int k = qtd_membros - 1; k >= 0; k--){
                     if(dir[k].localizacao > dir[iguais].localizacao){
-                        mover(arquivador, dir[k].localizacao, dir[k].localizacao - tam_diff, dir[k].tamanho_disco);
+                        mover(arquivador, 
+                            dir[k].localizacao, 
+                            dir[k].localizacao - tam_diff, 
+                            dir[k].tamanho_disco);
+
                         dir[k].localizacao -= tam_diff;
                     }
                 }
 
-                char *buffer = malloc(tam_insert);
-                if(!buffer){
-                    perror("Erro ao alocando buffer");
-                    fclose(fp_novo);
-                }
-
-                fread(buffer, 1, tam_insert, fp_novo);
-                fclose(fp_novo);
-
                 fseek(arquivador, dir[iguais].localizacao, SEEK_SET);
-                fwrite(buffer, 1, tam_insert, arquivador);
+                fwrite(buffer, 1, tam_comp, arquivador);
                 free(buffer);
 
-                dir[iguais].tamanho_disco    = tam_insert;
+                dir[iguais].tamanho_disco    = tam_comp;
                 dir[iguais].tamanho_original = tam_insert;
                 dir[iguais].data_mod         = time(NULL);
                 dir[iguais].uid              = getuid();
@@ -247,7 +282,6 @@ void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arqui
                 perror("Erro ao abrir novo arquivo");
                 fclose(arquivador);
             }
-            //nao pode fazer isso, aqui esta o erro
             struct membro *aux = malloc((qtd_membros + 1) * sizeof(struct membro));
 
             for(int k = 0; k < qtd_membros; k++){
@@ -268,14 +302,37 @@ void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arqui
             fread(buffer, 1, tamanho, novo_arquivo);
             fclose(novo_arquivo);
 
+            //caso for -ic
+            long int tam_comp = tamanho;
+            if(comprimir){
+                
+                char *buffer_comp = malloc(tam_comp * 1.004 + 1);
+                
+                tam_comp = (long int) LZ_Compress((unsigned char *) buffer, 
+                (unsigned char *) buffer_comp, tam_comp);
+
+                printf("%ld", tam_comp);
+                if(tam_comp >= tamanho){
+                    free(buffer_comp);
+                    tam_comp = tamanho;
+                    printf("Tamanho comprimido não ficou menor! \n");
+                }
+
+                else{
+                    free(buffer);
+                    buffer = buffer_comp;
+                }
+            }
+
             fseek(arquivador, 0, SEEK_END); 
 
-            long int pos_insercao = ftell(arquivador) - sizeof(int) - (qtd_membros * sizeof(struct membro));
+            long int pos_insercao = ftell(arquivador) - 
+            sizeof(int) - (qtd_membros * sizeof(struct membro));
 
-            ftruncate(fileno(arquivador), pos_insercao); //truncamos o arquivo, tiramos diretorio e int
+            ftruncate(fileno(arquivador), pos_insercao); //trunca diretorio e int
 
             fseek(arquivador, 0, SEEK_END);
-            fwrite(buffer, tamanho, 1, arquivador); //escreve novo arq no archive
+            fwrite(buffer, tam_comp, 1, arquivador);
 
             free(buffer);
 
@@ -286,10 +343,10 @@ void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arqui
             novo.ordem            = qtd_membros;
             novo.uid              = getuid();
             novo.tamanho_original = tamanho;
-            novo.tamanho_disco    = tamanho;
+            novo.tamanho_disco    = tam_comp;
             novo.localizacao      = pos_insercao;
 
-            aux[qtd_membros] = novo; //checar
+            aux[qtd_membros] = novo;
             qtd_membros ++;
 
             for(int l = 0; l < qtd_membros; l++){
@@ -302,6 +359,7 @@ void insere(char *archive, char *arquivo, int comprimir){ //n é numero de arqui
     }
     fclose(arquivador);
 }
+
 //separacao de funcoes
 
 
@@ -337,7 +395,7 @@ void lista_informacoes(char *archive){ // -c
 
     for(int i = 0; i < qtd_arquivos; i++){
         struct membro dir;
-        if(fread(&dir, sizeof(struct membro), 1, arquivador) != 1){  //precisa disso?
+        if(fread(&dir, sizeof(struct membro), 1, arquivador) != 1){ 
             perror("Erro ao ler struct membro");
             break;
         }
@@ -389,7 +447,7 @@ void remove_arquivos(char *archive, char **arquivos, int n){
 
         struct membro dir[qtd_membros];
 
-        for(int i = 0; i < qtd_membros; i ++){ //colocamos os membros do archive dentro de um vetor de membros (dir)
+        for(int i = 0; i < qtd_membros; i ++){
             fread(&dir[i], sizeof(struct membro), 1, arquivador);
         }
 
@@ -398,11 +456,11 @@ void remove_arquivos(char *archive, char **arquivos, int n){
             - (qtd_membros * sizeof(struct membro)), 
             SEEK_END);
 
-        long int pos_trunc = ftell(arquivador); //truncar soh no final?
+        long int pos_trunc = ftell(arquivador);
 
         ftruncate(fileno(arquivador), pos_trunc); //trunca o diretorio e o count
 
-        long int tam_trunc = 0; //damn
+        long int tam_trunc = 0;
 
         for(int i = 0; i < n; i++){
 
@@ -418,7 +476,7 @@ void remove_arquivos(char *archive, char **arquivos, int n){
 
             if(iguais == -1){ //nao achou no archive
                 printf("Erro: esse arquivo nao esta no archive!\n");
-                continue; //ta certo isso??
+                continue;
             }
 
             else if(iguais != -1){ //achou no archive
@@ -492,16 +550,29 @@ void extrai_arquivos(char *archive, char **arquivos, int n){
 
             for(int i = 0; i < qtd_membros; i++){
 
-                FILE *arquivo_x = fopen(dir[i].nome, "wb"); //checar
+                FILE *arquivo_x = fopen(dir[i].nome, "wb");
                     if(!arquivo_x){
                         perror("Erro ao criar arquivo de extracao!");
                         continue;
                     }
-                    if(0 > 3){ //aqui testar se esta comprimido e descomprimir
+                    if(dir[i].tamanho_disco < dir[i].tamanho_original){ //arquivo esta comprimido
 
+                        char *buffer = malloc(dir[i].tamanho_disco);
+                        fseek(arquivador, dir[i].localizacao, SEEK_SET);
+                        fread(buffer, 1, dir[i].tamanho_disco, arquivador);
+
+                        char *buffer_decomp = malloc(dir[i].tamanho_original);
+
+                        LZ_Uncompress((unsigned char *) buffer, 
+                        (unsigned char *) buffer_decomp, (unsigned int)dir[i].tamanho_disco);
+
+                        fwrite(buffer_decomp, 1, dir[i].tamanho_original, arquivo_x);
+
+                        free(buffer);
+                        free(buffer_decomp);
                     }
 
-                    else{ //nao esta comprimido
+                    else{ // arquivo nao esta comprimido
 
                         fseek(arquivador, dir[i].localizacao, SEEK_SET);
                         
@@ -531,18 +602,31 @@ void extrai_arquivos(char *archive, char **arquivos, int n){
 
                 if(iguais == -1){ //nao achou no archive
                     printf("Erro: esse arquivo nao esta no archive!\n");
-                    continue; //ta certo isso??
+                    continue;
                 }
 
                 else if(iguais != -1){ //achou no archive
 
-                    FILE *arquivo_x = fopen(dir[iguais].nome, "wb"); //checar
+                    FILE *arquivo_x = fopen(dir[iguais].nome, "wb");
                     if(!arquivo_x){
                         perror("Erro ao criar arquivo de extracao!");
                         continue;
                     }
-                    if(0 > 3){ //aqui testar se esta comprimido e descomprimir
+                    if(dir[iguais].tamanho_disco < dir[iguais].tamanho_original){ //arquivo esta comprimido
 
+                        char *buffer = malloc(dir[iguais].tamanho_disco);
+                        fseek(arquivador, dir[iguais].localizacao, SEEK_SET);
+                        fread(buffer, 1, dir[iguais].tamanho_disco, arquivador);
+
+                        char *buffer_decomp = malloc(dir[iguais].tamanho_original);
+
+                        LZ_Uncompress((unsigned char *) buffer, 
+                        (unsigned char *) buffer_decomp, (unsigned int)dir[iguais].tamanho_disco);
+
+                        fwrite(buffer_decomp, 1, dir[iguais].tamanho_original, arquivo_x);
+
+                        free(buffer);
+                        free(buffer_decomp);
                     }
 
                     else{ //nao esta comprimido
@@ -566,13 +650,11 @@ void extrai_arquivos(char *archive, char **arquivos, int n){
 
 void move_arquivos(char *archive, char **arquivos, int n){
 
-
     FILE *arquivador = fopen(archive, "rb+");
     if(!arquivador){
         perror("Erro ao abrir o archive");
         return;
     }
- 
  
     fseek(arquivador, 0, SEEK_END);
     long int tam = ftell(arquivador);
@@ -584,10 +666,7 @@ void move_arquivos(char *archive, char **arquivos, int n){
         return;
     }
  
- 
     else{ //archive nao esta vazio
-        
-        // checar se há target ou se é null!
 
         int qtd_membros;
 
@@ -602,7 +681,6 @@ void move_arquivos(char *archive, char **arquivos, int n){
             fread(&dir[i], sizeof(struct membro), 1, arquivador);
         }
  
-        
         if(n == 1){ //mover para o inicio
             
             int indice_mover = -1;
@@ -707,16 +785,14 @@ void move_arquivos(char *archive, char **arquivos, int n){
                 fclose(arquivador);
                 return;
             }
-    
-            //CASOS POSSIVIES:
 
             //primeiro truncamos diretorio e int para termos só os arquivos no archive
             fseek(arquivador, - sizeof(int) - (qtd_membros * sizeof(struct membro)), SEEK_END);
             long int pos_trunc = ftell(arquivador);
             ftruncate(fileno(arquivador), pos_trunc);
 
-            long int tam_mover = dir[indice_mover].tamanho_disco; //disco ou original?? checar se ta comprimido?
-            long int tam_target = dir[indice_target].tamanho_disco; //mesma duvida
+            long int tam_mover = dir[indice_mover].tamanho_disco;
+            long int tam_target = dir[indice_target].tamanho_disco;
 
             if(indice_mover < indice_target){ //mover pra depois
 
